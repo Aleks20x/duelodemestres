@@ -1,0 +1,4298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Duelo de Mestres</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-outer: #07090e;
+            --bg-frame: #111521;
+            --bg-panel: #191f2e;
+            --border-subtle: rgba(255, 255, 255, 0.09);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+
+            /* Cores das Cartas */
+            --heal-primary: #10b981;
+            --dmg-primary: #ef4444;
+            --mirror-primary: #a855f7;
+            --mirror-accent: #fbbf24;
+            --poison-primary: #84cc16;
+            --overload-primary: #f59e0b;
+            --shield-primary: #06b6d4;
+            --clone-primary: #6366f1;
+            --clone-accent: #ec4899;
+            --purify-primary: #38bdf8;
+            --vamp-primary: #dc2626;
+            --swap-primary: #14b8a6;
+            --revive-primary: #a855f7;
+            --vision-primary: #c084fc;
+            --link-primary: #ec4899;
+            --destroy-primary: #f97316;
+            --curse-primary: #7c3aed;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-outer);
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.12), transparent 45%),
+                radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.12), transparent 45%);
+            color: var(--text-main);
+            height: 100dvh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Container Principal Fixo 9:16 (90vh / 90vw) */
+        #game-frame {
+            position: relative;
+            aspect-ratio: 9 / 16;
+            height: 95vh;
+            width: 95vw;
+            max-width: calc(95vh * 9 / 16);
+            max-height: 95vh;
+            background: linear-gradient(180deg, #151a29 0%, #0c1019 100%);
+            border-radius: 28px;
+            border: 2px solid rgba(255, 255, 255, 0.13);
+            box-shadow:
+                0 25px 60px -12px rgba(0, 0, 0, 0.9),
+                0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (max-aspect-ratio: 9/16) {
+            #game-frame {
+                width: 95vw;
+                height: calc(95vw * 16 / 9);
+                max-height: 95vh;
+            }
+        }
+
+        /* Telas */
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 3.2% 3.8%;
+            transition: opacity 0.38s ease, transform 0.38s ease;
+            z-index: 10;
+        }
+
+        .screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.96);
+            z-index: 0;
+        }
+
+        /* ================= EMOJI / ARTE GIGANTE ATRÁS DOS TÍTULOS ================= */
+        .title-hero-wrap {
+            position: relative;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            isolation: isolate;
+        }
+
+        .title-bg-watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-8deg);
+            z-index: 0;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(9.5rem, 25vh, 17rem);
+            line-height: 1;
+            opacity: 0.22;
+            filter: drop-shadow(0 0 32px rgba(168, 85, 247, 0.45));
+            animation: watermarkPulse 4.5s ease-in-out infinite;
+        }
+
+        .title-bg-watermark img {
+            width: clamp(200px, 30vh, 310px);
+            height: clamp(200px, 30vh, 310px);
+            object-fit: contain;
+            display: block;
+            opacity: 1;
+        }
+
+        .title-bg-watermark.has-custom-art {
+            opacity: 0.9;
+            transform: translate(-50%, -50%) rotate(0deg);
+        }
+
+        @keyframes watermarkPulse {
+            0%, 100% { transform: translate(-50%, -50%) rotate(-8deg) scale(1); }
+            50% { transform: translate(-50%, -53%) rotate(-5deg) scale(1.05); }
+        }
+
+        /* ================= TELA INICIAL ================= */
+        #start-screen {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            gap: 3.2%;
+            background:
+                radial-gradient(ellipse at 50% 42%, rgba(168, 85, 247, 0.24), transparent 58%),
+                radial-gradient(circle at 50% 100%, rgba(59, 130, 246, 0.10), transparent 48%);
+        }
+
+        .game-logo {
+            position: relative;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.2vh;
+            flex: 1;
+        }
+
+        .game-logo h1 {
+            position: relative;
+            z-index: 2;
+            display: inline-block;
+            font-size: clamp(3.2rem, 13.5vh, 8.8rem);
+            font-weight: 900;
+            line-height: 0.98;
+            letter-spacing: -1.8px;
+            color: transparent;
+            background: linear-gradient(105deg, #ffffff 0%, #dbeafe 34%, #c084fc 52%, #ffffff 62%, #e9d5ff 78%, #ffffff 100%);
+            background-size: 240% 100%;
+            background-position: 100% 50%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 9px 24px rgba(168, 85, 247, 0.38));
+            animation: titleBeam 4.2s ease-in-out infinite;
+        }
+
+        @keyframes titleBeam {
+            0%, 12% { background-position: 100% 50%; }
+            72%, 100% { background-position: 0% 50%; }
+        }
+
+        .game-logo p {
+            position: relative;
+            z-index: 2;
+            max-width: 88%;
+            font-size: clamp(0.72rem, 1.55vh, 0.98rem);
+            line-height: 1.4;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+
+        .title-badge {
+            position: relative;
+            z-index: 2;
+            margin-top: 1.2%;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: clamp(0.56rem, 1.15vh, 0.74rem);
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--mirror-accent);
+        }
+
+        .rules-box {
+            width: 100%;
+            max-height: 55%;
+            overflow-y: auto;
+            background: rgba(25, 31, 46, 0.9);
+            border: 1px solid var(--border-subtle);
+            border-radius: 18px;
+            padding: 2.2% 2.8%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.65vh;
+            text-align: left;
+            backdrop-filter: blur(8px);
+        }
+
+        .rules-box::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .rules-box::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 99px;
+        }
+
+        .rule-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .rule-icon {
+            width: clamp(24px, 3.1vh, 30px);
+            height: clamp(24px, 3.1vh, 30px);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: clamp(0.72rem, 1.45vh, 0.9rem);
+            flex-shrink: 0;
+            color: #fff;
+            overflow: hidden;
+            padding: 2px;
+        }
+
+        .rule-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+            display: block;
+        }
+
+        .rule-icon.nums {
+            background: linear-gradient(135deg, #10b981 50%, #ef4444 50%);
+            font-size: clamp(0.6rem, 1.15vh, 0.75rem);
+            gap: 1px;
+        }
+
+        .rule-icon.nums img {
+            width: 48%;
+            height: 85%;
+            object-fit: contain;
+        }
+
+        .rule-inline-art {
+            display: inline-block;
+            width: 1.25em;
+            height: 1.25em;
+            object-fit: contain;
+            vertical-align: -0.22em;
+        }
+
+        .rule-icon.mirror {
+            background: linear-gradient(135deg, #a855f7, #7e22ce);
+            border: 1px solid var(--mirror-accent);
+        }
+        .rule-icon.clone {
+            background: linear-gradient(135deg, #6366f1, #ec4899);
+            border: 1px solid #f472b6;
+        }
+        .rule-icon.purify {
+            background: linear-gradient(135deg, #38bdf8, #1d4ed8);
+            border: 1px solid #bae6fd;
+        }
+        .rule-icon.poison {
+            background: linear-gradient(135deg, #84cc16, #3f6212);
+        }
+        .rule-icon.overload {
+            background: linear-gradient(135deg, #f59e0b, #b45309);
+        }
+        .rule-icon.shield {
+            background: linear-gradient(135deg, #06b6d4, #164e63);
+        }
+        .rule-icon.vamp {
+            background: linear-gradient(135deg, #dc2626, #450a0a);
+        }
+        .rule-icon.swap {
+            background: linear-gradient(135deg, #14b8a6, #115e59);
+        }
+        .rule-icon.revive {
+            background: linear-gradient(135deg, #9333ea, #3b0764);
+            border: 1px solid #e9d5ff;
+        }
+        .rule-icon.vision {
+            background: linear-gradient(135deg, #c084fc, #581c87);
+        }
+        .rule-icon.link {
+            background: linear-gradient(135deg, #ec4899, #831843);
+            border: 1px solid #f9a8d4;
+        }
+        .rule-icon.destroy {
+            background: linear-gradient(135deg, #f97316, #7c2d12);
+            border: 1px solid #fdba74;
+        }
+        .rule-icon.curse {
+            background: linear-gradient(135deg, #7c3aed, #2e1065);
+            border: 1px solid #c4b5fd;
+        }
+
+        .rule-text h3 {
+            font-size: clamp(0.66rem, 1.3vh, 0.82rem);
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.12;
+        }
+
+        .rule-text p {
+            font-size: clamp(0.55rem, 1.08vh, 0.68rem);
+            color: var(--text-muted);
+            line-height: 1.15;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 1.5vh 0;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            font-size: clamp(0.9rem, 2vh, 1.25rem);
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.5), 0 2px 0 rgba(255,255,255,0.25) inset;
+            transition: transform 0.2s ease, filter 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.08);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.97);
+        }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 1.35vh 0;
+            border: 1.5px solid rgba(255, 255, 255, 0.22);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #f8fafc;
+            font-size: clamp(0.8rem, 1.75vh, 1.05rem);
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary:active {
+            transform: scale(0.97);
+        }
+
+        .start-actions {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1vh;
+            margin-top: auto;
+            margin-bottom: 3%;
+        }
+
+        .rules-modal {
+            position: absolute;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4%;
+            background: rgba(4, 6, 12, 0.86);
+            backdrop-filter: blur(9px);
+            opacity: 1;
+            transition: opacity .22s ease;
+        }
+        .rules-modal.hidden {
+            display: none;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .rules-panel {
+            width: 100%;
+            max-height: 92%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 4%;
+            border-radius: 20px;
+            border: 1px solid rgba(192,132,252,.35);
+            background: linear-gradient(180deg, #171d2c, #0e1320);
+            box-shadow: 0 22px 60px rgba(0,0,0,.72), 0 0 28px rgba(168,85,247,.12);
+            overflow: hidden;
+        }
+        .rules-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .rules-kicker {
+            color: #c084fc;
+            font-size: .62rem;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+        }
+        .rules-header h2 {
+            color: #fff;
+            font-size: clamp(1.05rem, 2.2vh, 1.35rem);
+            font-weight: 900;
+        }
+        .rules-panel .rules-box {
+            max-height: none;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 3%;
+            gap: .9vh;
+            background: rgba(7, 11, 20, .55);
+        }
+        .rules-panel .rule-text p { line-height: 1.28; }
+        .rules-panel .rule-item { align-items: flex-start; }
+        .rules-panel .rule-icon { margin-top: 1px; flex-shrink: 0; }
+
+        /* Identidade visual sutil para cura, dano e cartas especiais. */
+        .card.odd, .card.shield, .card.purify {
+            animation: healCardGlow 3.2s ease-in-out infinite;
+        }
+        .card.even, .card.poison, .card.overload, .card.vamp, .card.link, .card.destroy, .card.curse {
+            animation: damageCardGlow 2.8s ease-in-out infinite;
+        }
+        .card.mirror, .card.clone, .card.swap, .card.revive, .card.vision {
+            animation: specialCardGlow 3.6s ease-in-out infinite;
+        }
+        .card.mirror::after, .card.clone::after, .card.revive::after,
+        .card.vision::after, .card.swap::after, .card.link::after,
+        .card.destroy::after, .card.curse::after {
+            content: '';
+            position: absolute;
+            inset: -40% -80%;
+            background: linear-gradient(110deg, transparent 42%, rgba(255,255,255,.16) 50%, transparent 58%);
+            transform: translateX(-55%) rotate(8deg);
+            animation: cardShimmer 4.8s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .card.odd::after, .card.shield::after, .card.purify::after {
+            content: '+';
+            position: absolute;
+            right: 5px;
+            top: 2px;
+            color: rgba(236,253,245,.35);
+            font-size: .7rem;
+            font-weight: 900;
+            pointer-events: none;
+        }
+        .card.even::after, .card.poison::after, .card.overload::after, .card.vamp::after {
+            content: '✦';
+            position: absolute;
+            right: 5px;
+            top: 2px;
+            color: rgba(255,255,255,.32);
+            font-size: .62rem;
+            pointer-events: none;
+        }
+        @keyframes healCardGlow {
+            0%, 100% { box-shadow: 0 5px 12px rgba(0,0,0,.45), 0 0 0 rgba(16,185,129,0); }
+            50% { box-shadow: 0 5px 12px rgba(0,0,0,.45), 0 0 11px rgba(16,185,129,.25); }
+        }
+        @keyframes damageCardGlow {
+            0%, 100% { box-shadow: 0 5px 12px rgba(0,0,0,.45), 0 0 0 rgba(239,68,68,0); }
+            50% { box-shadow: 0 5px 12px rgba(0,0,0,.45), 0 0 12px rgba(239,68,68,.28); }
+        }
+        @keyframes specialCardGlow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.12); }
+        }
+        @keyframes cardShimmer {
+            0%, 72%, 100% { transform: translateX(-65%) rotate(8deg); opacity: 0; }
+            78% { opacity: 1; }
+            92% { transform: translateX(65%) rotate(8deg); opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .card, .card::after { animation: none !important; }
+        }
+
+        /* ================= TELA DE JOGO ================= */
+        #game-screen {
+            justify-content: space-between;
+            padding: 2.5% 3.2%;
+            gap: 0.7vh;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+            border-radius: 11px;
+            padding: 5px 9px;
+            font-size: clamp(0.66rem, 1.3vh, 0.8rem);
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.25s;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        /* Painel de Jogador (IA e Você) */
+        .player-zone {
+            background: rgba(25, 31, 46, 0.82);
+            border: 1px solid var(--border-subtle);
+            border-radius: 18px;
+            padding: 1.8% 2.6%;
+            transition: box-shadow 0.4s ease, border-color 0.4s ease;
+        }
+
+        .player-zone.active-turn {
+            border-color: rgba(251, 191, 36, 0.55);
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.13);
+        }
+
+        .player-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.65vh;
+            gap: 6px;
+        }
+
+        .player-identity {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+        }
+
+        .avatar {
+            width: clamp(25px, 3.2vh, 32px);
+            height: clamp(25px, 3.2vh, 32px);
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(0.82rem, 1.7vh, 1.05rem);
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .avatar.ai { background: linear-gradient(135deg, #f43f5e, #be123c); }
+        .avatar.human { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+
+        .player-name {
+            font-weight: 800;
+            font-size: clamp(0.78rem, 1.65vh, 0.98rem);
+            white-space: nowrap;
+        }
+
+        /* Badges de Status */
+        .status-badges {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: nowrap;
+    width: 100%;
+    height: 19px;
+    min-height: 19px;
+    max-height: 19px;
+    margin-top: 1px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overscroll-behavior-x: contain;
+    contain: layout paint;
+}
+
+.status-badges::-webkit-scrollbar {
+    display: none;
+}
+
+.status-badges:empty {
+    visibility: hidden;
+}
+
+        .badge {
+            font-size: clamp(0.55rem, 1.08vh, 0.68rem);
+            font-weight: 800;
+            padding: 1.5px 5px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            white-space: nowrap;
+        }
+
+        .badge.shield {
+            background: rgba(6, 182, 212, 0.22);
+            border: 1px solid #22d3ee;
+            color: #67e8f9;
+        }
+
+        .badge.poison {
+            background: rgba(132, 204, 22, 0.22);
+            border: 1px solid #a3e635;
+            color: #bef264;
+        }
+
+        .badge.overload {
+            background: rgba(245, 158, 11, 0.24);
+            border: 1px solid #fbbf24;
+            color: #fde047;
+        }
+
+        .badge.vision {
+            background: rgba(192, 132, 252, 0.24);
+            border: 1px solid #d8b4fe;
+            color: #f3e8ff;
+        }
+
+        .badge.link {
+            background: rgba(236, 72, 153, 0.24);
+            border: 1px solid #f472b6;
+            color: #fbcfe8;
+        }
+
+        .badge.curse {
+            background: rgba(124, 58, 237, 0.28);
+            border: 1px solid #a78bfa;
+            color: #ede9fe;
+        }
+
+        .hp-numbers {
+            font-weight: 900;
+            font-size: clamp(0.88rem, 1.95vh, 1.15rem);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .hp-numbers span {
+            color: var(--text-muted);
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        /* Barra de Vida */
+        .hp-track {
+            width: 100%;
+            height: clamp(12px, 1.75vh, 17px);
+            background: #0b0e17;
+            border-radius: 999px;
+            padding: 2px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .hp-fill {
+            height: 100%;
+            width: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #10b981, #34d399);
+            transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s ease;
+        }
+
+        .hp-fill.mid { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .hp-fill.low { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+        /* Mão da IA (6 cartas padronizadas) */
+        .ai-hand {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 4px;
+            margin-top: 0.95vh;
+            width: 100%;
+            align-items: stretch;
+        }
+
+        .ai-card-back {
+            width: 100%;
+            aspect-ratio: 2 / 3;
+            border-radius: 11px;
+            background: linear-gradient(160deg, #1e293b 0%, #0f172a 100%);
+            border: 1.5px solid rgba(255, 255, 255, 0.22);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(0.75rem, 1.5vh, 0.95rem);
+            color: rgba(255, 255, 255, 0.42);
+            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ai-card-back::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(145deg, rgba(255,255,255,0.12) 0%, transparent 55%);
+            pointer-events: none;
+        }
+
+        .ai-card-back.empty {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1.5px dashed rgba(255, 255, 255, 0.12);
+            box-shadow: none;
+            opacity: 0.45;
+        }
+        .ai-card-back.empty::before { display: none; }
+
+        .ai-card-revealed {
+            cursor: default;
+        }
+        .ai-card-revealed:hover { transform: none !important; }
+
+        /* ================= ARENA CENTRAL ================= */
+        .arena {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.03) 0%, transparent 75%);
+            border-radius: 20px;
+            border: 1px dashed rgba(255, 255, 255, 0.09);
+            padding: 1.5% 2.5%;
+            position: relative;
+            overflow: hidden;
+            isolation: isolate;
+        }
+
+        /* Fundo personalizado que ocupa todo o palco da arena sem cobrir os elementos */
+        .arena-bg-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+            border-radius: inherit;
+        }
+
+        .arena-bg-layer img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+        }
+
+        .arena-bg-layer::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(11, 15, 25, 0.34) 0%, rgba(11, 15, 25, 0.22) 50%, rgba(11, 15, 25, 0.42) 100%);
+            pointer-events: none;
+        }
+
+        /* Garante que todos os elementos da arena fiquem desenhados acima do fundo */
+        .arena > :not(.arena-bg-layer) {
+            position: relative;
+            z-index: 2;
+        }
+
+        .turn-banner {
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.13);
+            padding: 4px 12px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: clamp(0.68rem, 1.5vh, 0.86rem);
+            font-weight: 800;
+            letter-spacing: 0.4px;
+        }
+
+        .turn-dots {
+            display: flex;
+            gap: 5px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: background 0.35s, transform 0.35s;
+        }
+
+        .dot.filled {
+            background: #fbbf24;
+            box-shadow: 0 0 8px #fbbf24;
+            transform: scale(1.15);
+        }
+
+        .dot.locked {
+            background: #ef4444;
+            box-shadow: 0 0 6px #ef4444;
+        }
+
+        .battle-stage {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3%;
+            width: 100%;
+            flex: 1;
+            position: relative;
+        }
+
+        .pile-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.82);
+            border: 1px solid var(--border-subtle);
+            border-radius: 13px;
+            padding: 6px 8px;
+            min-width: clamp(46px, 6.2vh, 62px);
+            text-align: center;
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .pile-box.clickable-pile {
+            cursor: pointer;
+        }
+
+        .pile-box.clickable-pile:hover {
+            transform: translateY(-2px);
+            border-color: rgba(251, 191, 36, 0.55);
+            background: rgba(30, 41, 59, 0.94);
+        }
+
+        .pile-box.clickable-pile:active {
+            transform: scale(0.96);
+        }
+
+        .pile-icon { font-size: clamp(0.9rem, 1.9vh, 1.18rem); margin-bottom: 1px; }
+        .pile-count { font-size: clamp(0.86rem, 1.9vh, 1.12rem); font-weight: 900; color: #fff; }
+        .pile-label {
+            font-size: clamp(0.5rem, 1.02vh, 0.64rem);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        /* 2 Slots Centrais de Tamanho Fixo e Uniforme */
+        .played-cards-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .played-card-slot {
+            width: clamp(70px, 9.4vh, 94px);
+            aspect-ratio: 2 / 3;
+            height: auto;
+            border-radius: 13px;
+            border: 2px dashed rgba(255, 255, 255, 0.22);
+            background: rgba(11, 15, 25, 0.48);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.35s ease;
+            overflow: hidden;
+        }
+
+        .played-card-slot.locked-slot {
+            border-color: rgba(245, 158, 11, 0.65);
+            background: repeating-linear-gradient(
+                -45deg,
+                rgba(245, 158, 11, 0.16),
+                rgba(245, 158, 11, 0.16) 8px,
+                rgba(15, 23, 42, 0.72) 8px,
+                rgba(15, 23, 42, 0.72) 16px
+            );
+        }
+
+        .played-card-slot .placeholder-text {
+            font-size: clamp(0.56rem, 1.1vh, 0.7rem);
+            color: rgba(255, 255, 255, 0.42);
+            text-align: center;
+            padding: 4px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .played-card-slot.locked-slot .placeholder-text {
+            color: #fbbf24;
+        }
+
+        .action-feed {
+            width: 100%;
+            text-align: center;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.11);
+            border-radius: 12px;
+            padding: 5px 8px;
+            font-size: clamp(0.65rem, 1.4vh, 0.82rem);
+            font-weight: 700;
+            min-height: clamp(26px, 3.4vh, 32px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #e2e8f0;
+        }
+
+        /* ================= MÃO DO JOGADOR (6 CARTAS PADRONIZADAS) ================= */
+        .player-hand-container {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 4px;
+            margin-top: 0.95vh;
+            width: 100%;
+            align-items: stretch;
+        }
+
+        .card {
+            width: 100%;
+            aspect-ratio: 2 / 3;
+            border-radius: 11px;
+            padding: 4px 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, opacity 0.25s ease;
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.45);
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(145deg, rgba(255,255,255,0.24) 0%, transparent 55%);
+            pointer-events: none;
+        }
+
+        .card.odd {
+            background: linear-gradient(160deg, #10b981 0%, #047857 100%);
+            border-color: #6ee7b7;
+        }
+
+        .card.even {
+            background: linear-gradient(160deg, #ef4444 0%, #b91c1c 100%);
+            border-color: #fca5a5;
+        }
+
+        .card.mirror {
+            background: linear-gradient(160deg, #a855f7 0%, #581c87 100%);
+            border-color: #fbbf24;
+            box-shadow: 0 5px 15px rgba(168, 85, 247, 0.4);
+        }
+
+        .card.clone {
+            background: linear-gradient(160deg, #6366f1 0%, #be185d 100%);
+            border-color: #f472b6;
+            box-shadow: 0 5px 15px rgba(236, 72, 153, 0.4);
+        }
+
+        .card.poison {
+            background: linear-gradient(160deg, #84cc16 0%, #365314 100%);
+            border-color: #d9f99d;
+            box-shadow: 0 5px 14px rgba(132, 204, 22, 0.35);
+        }
+
+        .card.overload {
+            background: linear-gradient(160deg, #f59e0b 0%, #78350f 100%);
+            border-color: #fde047;
+            box-shadow: 0 5px 14px rgba(245, 158, 11, 0.4);
+        }
+
+        .card.shield {
+            background: linear-gradient(160deg, #06b6d4 0%, #164e63 100%);
+            border-color: #a5f3fc;
+            box-shadow: 0 5px 14px rgba(6, 182, 212, 0.35);
+        }
+
+        .card.purify {
+            background: linear-gradient(160deg, #38bdf8 0%, #1e40af 100%);
+            border-color: #bae6fd;
+            box-shadow: 0 5px 14px rgba(56, 189, 248, 0.4);
+        }
+
+        .card.vamp {
+            background: linear-gradient(160deg, #dc2626 0%, #450a0a 100%);
+            border-color: #fca5a5;
+            box-shadow: 0 5px 15px rgba(220, 38, 38, 0.42);
+        }
+
+        .card.swap {
+            background: linear-gradient(160deg, #14b8a6 0%, #115e59 100%);
+            border-color: #99f6e4;
+            box-shadow: 0 5px 14px rgba(20, 184, 166, 0.38);
+        }
+
+        .card.revive {
+            background: linear-gradient(160deg, #9333ea 0%, #3b0764 100%);
+            border-color: #e9d5ff;
+            box-shadow: 0 5px 15px rgba(147, 51, 234, 0.45);
+        }
+
+        .card.vision {
+            background: linear-gradient(160deg, #c084fc 0%, #581c87 100%);
+            border-color: #f3e8ff;
+            box-shadow: 0 5px 14px rgba(192, 132, 252, 0.4);
+        }
+
+        .card.link {
+            background: linear-gradient(160deg, #ec4899 0%, #831843 100%);
+            border-color: #f9a8d4;
+            box-shadow: 0 5px 15px rgba(236, 72, 153, 0.42);
+        }
+
+        .card.destroy {
+            background: linear-gradient(160deg, #f97316 0%, #7c2d12 100%);
+            border-color: #fdba74;
+            box-shadow: 0 5px 15px rgba(249, 115, 22, 0.42);
+        }
+
+        .card.curse {
+            background: linear-gradient(160deg, #7c3aed 0%, #2e1065 100%);
+            border-color: #c4b5fd;
+            box-shadow: 0 5px 15px rgba(124, 58, 237, 0.45);
+        }
+
+        .card:not(.disabled):hover {
+            transform: translateY(-6px) scale(1.03);
+            z-index: 5;
+        }
+
+        .card:not(.disabled):active {
+            transform: scale(0.95);
+        }
+
+        .card.disabled {
+            opacity: 0.42;
+            cursor: not-allowed;
+            filter: grayscale(0.35);
+        }
+
+        .card.slot-unavailable {
+            opacity: 0.38;
+            filter: grayscale(0.6);
+            border-style: dashed;
+        }
+
+        .card.empty-slot {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1.5px dashed rgba(255, 255, 255, 0.12);
+            box-shadow: none;
+            cursor: default;
+        }
+        .card.empty-slot::before { display: none; }
+
+        .card-type-badge {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            min-height: 1.55em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(0.37rem, 1.05vw, 0.68rem);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.25px;
+            background: rgba(0, 0, 0, 0.38);
+            padding: 2px 3px;
+            border-radius: 5px;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-art {
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            min-height: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 0;
+            font-size: clamp(1.35rem, 5.0vw, 2.8rem);
+            line-height: 1;
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,.28));
+        }
+
+        .card-art img {
+            display: block;
+            width: 100%;
+            height: 145%;
+            max-width: 100%;
+            max-height: none;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .card-bottom {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            min-height: 2.35em;
+            padding: 2px 1px;
+            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.28);
+        }
+
+        .card-value {
+            font-size: clamp(0.62rem, 1.75vw, 1.05rem);
+            font-weight: 900;
+            line-height: 1;
+            color: #fff;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        .card-icon {
+            font-size: clamp(0.30rem, 0.82vw, 0.52rem);
+            line-height: 1.05;
+            font-weight: 800;
+            white-space: nowrap;
+            opacity: .94;
+        }
+
+        /* Carta no Centro (Tamanho Padronizado) */
+        .played-card-slot .card {
+            width: 100%;
+            height: 100%;
+            aspect-ratio: auto;
+            cursor: default;
+            padding: 6px 4px;
+            animation: cardPopIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .played-card-slot .card:hover { transform: none; }
+        .played-card-slot .card .card-type-badge { font-size: clamp(0.55rem, 1.05vh, 0.72rem); }
+        .played-card-slot .card .card-art { font-size: clamp(2rem, 5vh, 3.6rem); }
+        .played-card-slot .card .card-value { font-size: clamp(1rem, 2.3vh, 1.55rem); }
+        .played-card-slot .card .card-icon { font-size: clamp(0.46rem, 0.9vh, 0.62rem); }
+
+        .player-hand-container .card {
+            min-width: 0;
+            min-height: 0;
+            padding: 3px 2px;
+            border-radius: 9px;
+        }
+        .player-hand-container .card .card-type-badge {
+            font-size: clamp(5px, 1.45vw, 8px);
+            min-height: 1.65em;
+            padding: 2px 1px;
+            letter-spacing: 0;
+        }
+        .player-hand-container .card .card-art {
+            font-size: clamp(19px, 6vw, 34px);
+            min-height: 0;
+            overflow: visible;
+        }
+        .player-hand-container .card .card-art img {
+            width: 100%;
+            height: 145%;
+            max-width: 100%;
+            max-height: none;
+            object-fit: contain;
+        }
+        .player-hand-container .card .card-bottom {
+            min-height: 2.45em;
+            gap: 1px;
+            padding: 2px 0;
+        }
+        .player-hand-container .card .card-value { font-size: clamp(8px, 2.2vw, 12px); }
+        .player-hand-container .card .card-icon {
+            font-size: clamp(4px, 1.15vw, 6px);
+            white-space: normal;
+            text-align: center;
+            line-height: 1.05;
+        }
+        .played-card-slot .card .card-art img {
+            width: 100%; height: 145%; max-width: 100%; max-height: none;
+            object-fit: contain;
+        }
+
+        .played-card-slot .card.purify-vanish {
+            animation: cardFadeOut 0.4s ease forwards;
+        }
+
+        /* ================= MODAL DO LIXO & MODAL DESTRUIR ================= */
+        #discard-modal, #destroy-modal {
+            position: absolute;
+            inset: 0;
+            background: rgba(7, 9, 14, 0.82);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4%;
+            z-index: 80;
+            opacity: 1;
+            transition: opacity 0.25s ease;
+        }
+
+        #discard-modal.hidden, #destroy-modal.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .discard-panel {
+            width: 100%;
+            max-height: 78%;
+            background: #141926;
+            border: 1.5px solid rgba(255, 255, 255, 0.16);
+            border-radius: 20px;
+            padding: 3.5%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.85);
+            overflow: hidden;
+        }
+
+        .destroy-panel {
+            width: 100%;
+            background: linear-gradient(180deg, #1b1726, #111521);
+            border: 1.5px solid rgba(249, 115, 22, 0.55);
+            border-radius: 20px;
+            padding: 4%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.88), 0 0 25px rgba(249, 115, 22, 0.2);
+            text-align: center;
+        }
+
+        .destroy-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            width: 100%;
+            padding: 4px 0;
+        }
+
+        .destroy-cards-grid .card {
+            aspect-ratio: 2 / 3;
+            cursor: pointer;
+            border-width: 2px;
+        }
+
+        .destroy-cards-grid .card:hover {
+            transform: translateY(-6px) scale(1.04);
+            border-color: #fb923c;
+            box-shadow: 0 10px 22px rgba(249, 115, 22, 0.45);
+        }
+
+        .destroy-cards-grid .card .card-type-badge {
+            font-size: clamp(0.45rem, 1.15vw, 0.68rem);
+        }
+        .destroy-cards-grid .card .card-art {
+            font-size: clamp(1.8rem, 5.5vw, 3.2rem);
+        }
+        .destroy-cards-grid .card .card-value {
+            font-size: clamp(0.75rem, 1.8vw, 1.1rem);
+        }
+        .destroy-cards-grid .card .card-icon {
+            font-size: clamp(0.36rem, 0.85vw, 0.52rem);
+        }
+
+        .discard-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .discard-title {
+            font-size: clamp(0.85rem, 1.75vh, 1.05rem);
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .discard-close-btn {
+            background: rgba(255, 255, 255, 0.09);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            color: #f8fafc;
+            border-radius: 10px;
+            padding: 4px 10px;
+            font-size: clamp(0.7rem, 1.35vh, 0.85rem);
+            font-weight: 800;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .discard-close-btn:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .discard-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-right: 2px;
+        }
+
+        .discard-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .discard-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.22);
+            border-radius: 99px;
+        }
+
+        .discard-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(25, 31, 46, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-left-width: 4px;
+            border-radius: 11px;
+            padding: 7px 10px;
+            font-size: clamp(0.68rem, 1.35vh, 0.84rem);
+            font-weight: 700;
+        }
+
+        .discard-item-left {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+        }
+
+        .discard-order {
+            color: var(--text-muted);
+            font-size: 0.85em;
+            font-weight: 800;
+        }
+
+        .discard-name {
+            color: #fff;
+            font-weight: 800;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .discard-tag {
+            color: #cbd5e1;
+            font-size: 0.85em;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .discard-empty {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: clamp(0.72rem, 1.4vh, 0.88rem);
+            padding: 20px 10px;
+            font-weight: 700;
+        }
+
+        /* ================= TELA DE FIM DE JOGO ================= */
+        #gameover-screen {
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+            background: radial-gradient(circle at 50% 20%, rgba(251, 191, 36, 0.16), transparent 65%);
+        }
+
+        .result-header { margin-top: 1.5%; }
+        .result-emoji { font-size: clamp(2.4rem, 5.5vh, 3.8rem); line-height: 1.1; margin-bottom: 3px; }
+        .result-title { font-size: clamp(1.85rem, 4.4vh, 2.9rem); font-weight: 900; letter-spacing: -0.5px; }
+        .result-title.win {
+            background: linear-gradient(135deg, #34d399, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .result-title.lose {
+            background: linear-gradient(135deg, #f87171, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .result-subtitle { color: var(--text-muted); font-size: clamp(0.76rem, 1.55vh, 0.94rem); margin-top: 3px; }
+
+        .stats-grid {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1vh;
+            background: rgba(25, 31, 46, 0.88);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 3%;
+        }
+
+        .stat-card {
+            background: rgba(15, 23, 42, 0.68);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 13px;
+            padding: 1.1vh 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-value { font-size: clamp(1.05rem, 2.3vh, 1.5rem); font-weight: 900; color: #fff; }
+        .stat-label { font-size: clamp(0.6rem, 1.25vh, 0.76rem); color: var(--text-muted); margin-top: 2px; font-weight: 600; }
+
+        .gameover-actions {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1vh;
+        }
+
+        /* ================= EFEITOS FLUTUANTES & ANIMAÇÕES ================= */
+        .floating-number {
+            position: absolute;
+            font-weight: 900;
+            font-size: clamp(1.2rem, 2.9vh, 1.85rem);
+            pointer-events: none;
+            z-index: 50;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.85);
+            animation: floatUp 1.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            white-space: nowrap;
+        }
+
+        .floating-number.heal { color: #34d399; }
+        .floating-number.dmg { color: #f87171; }
+        .floating-number.mirror { color: #e879f9; }
+        .floating-number.clone { color: #f472b6; }
+        .floating-number.shield { color: #22d3ee; }
+        .floating-number.poison { color: #a3e635; }
+        .floating-number.overload { color: #fbbf24; }
+        .floating-number.purify { color: #7dd3fc; }
+        .floating-number.vamp { color: #fb7185; }
+        .floating-number.swap { color: #2dd4bf; }
+        .floating-number.revive { color: #e9d5ff; }
+        .floating-number.vision { color: #e9d5ff; }
+        .floating-number.link { color: #f472b6; }
+        .floating-number.destroy { color: #fb923c; }
+        .floating-number.curse { color: #c4b5fd; }
+
+        .toast-banner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 23, 42, 0.96);
+            border: 2px solid #fbbf24;
+            color: #fbbf24;
+            padding: 10px 16px;
+            border-radius: 16px;
+            font-weight: 900;
+            font-size: clamp(0.74rem, 1.6vh, 0.92rem);
+            text-align: center;
+            z-index: 60;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.85);
+            pointer-events: none;
+            animation: toastPop 2.1s ease forwards;
+            width: 84%;
+            line-height: 1.3;
+        }
+
+        @keyframes cardPopIn {
+            0% { transform: scale(0.5) rotate(-8deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        @keyframes cardFadeOut {
+            0% { transform: scale(1) translateY(0); opacity: 1; }
+            100% { transform: scale(0.6) translateY(-16px); opacity: 0; }
+        }
+
+        @keyframes floatUp {
+            0% { transform: translate(-50%, 0) scale(0.7); opacity: 0; }
+            22% { transform: translate(-50%, -14px) scale(1.15); opacity: 1; }
+            100% { transform: translate(-50%, -62px) scale(1); opacity: 0; }
+        }
+
+        @keyframes toastPop {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            15% { transform: translate(-50%, -50%) scale(1.03); opacity: 1; }
+            85% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -60%) scale(0.95); opacity: 0; }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-7px); }
+            40% { transform: translateX(7px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+
+        @keyframes healPulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            50% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .anim-shake {
+            animation: shake 0.55s ease;
+            border-color: #ef4444 !important;
+        }
+
+        .anim-heal {
+            animation: healPulse 0.75s ease;
+            border-color: #10b981 !important;
+        }
+
+        /* ================= CARREGAMENTO INICIAL ================= */
+        #loading-screen {
+            position: absolute;
+            inset: 0;
+            z-index: 120;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5vh;
+            padding: 8%;
+            text-align: center;
+            background: radial-gradient(circle at 50% 42%, #252044 0%, #111521 48%, #080b12 100%);
+            transition: opacity .35s ease, visibility .35s ease;
+        }
+        #loading-screen.done { opacity: 0; visibility: hidden; pointer-events: none; }
+        .loading-mark { position: relative; z-index: 2; font-size: clamp(2.2rem, 6vh, 3.8rem); animation: loadingFloat 1.3s ease-in-out infinite; }
+        .loading-title {
+            position: relative;
+            z-index: 2;
+            font-size: clamp(1.35rem, 3.2vh, 2rem);
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-shadow: 0 4px 18px rgba(0, 0, 0, 0.8);
+        }
+        .loading-subtitle { position: relative; z-index: 2; color: var(--text-muted); font-size: clamp(.65rem, 1.25vh, .82rem); }
+        .loading-track { position: relative; z-index: 2; width: 76%; height: 6px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.12); }
+        #loading-progress { width: 0%; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#6366f1,#c084fc,#fff); transition: width .2s ease; }
+        #loading-percent { position: relative; z-index: 2; color: #c4b5fd; font-size: .72rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+        @keyframes loadingFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+        @media (prefers-reduced-motion: reduce) { .game-logo h1, .loading-mark, .title-bg-watermark { animation: none !important; } }
+
+        /* AJUSTES VISUAIS: título contido e artes das cartas sem serem comprimidas pelo texto */
+        .game-logo h1 {
+            width: 100%;
+            max-width: 100%;
+            padding: 0 3%;
+            text-align: center;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            font-size: clamp(2rem, 6.8vh, 4.45rem) !important;
+            line-height: 1.02;
+            letter-spacing: -0.055em;
+        }
+
+        /* A arte ocupa o espaço inteiro da carta; os textos ficam sobre ela em camada superior. */
+        .card { isolation: isolate; }
+        .card-art {
+            position: absolute;
+            inset: 3px;
+            z-index: 1;
+            width: auto;
+            height: auto;
+            min-height: 0;
+            flex: none;
+            padding: 0;
+            overflow: visible;
+            font-size: clamp(2rem, 7vw, 4rem);
+            line-height: 1;
+        }
+        .card-art img {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            object-position: center;
+        }
+        .card-type-badge {
+            position: absolute;
+            top: 4px;
+            left: 3px;
+            right: 3px;
+            z-index: 4;
+            width: auto;
+            min-height: 0;
+            padding: 1px 2px;
+            background: transparent;
+            border-radius: 0;
+            font-size: clamp(0.34rem, 0.85vw, 0.58rem);
+            line-height: 1.05;
+            letter-spacing: 0;
+            text-shadow: 0 1px 3px #000, 0 0 5px #000, 0 0 8px #000;
+            overflow: visible;
+            white-space: normal;
+        }
+        .card-bottom {
+            position: absolute;
+            left: 2px;
+            right: 2px;
+            bottom: 3px;
+            z-index: 4;
+            width: auto;
+            min-height: 0;
+            gap: 1px;
+            padding: 1px 2px;
+            background: transparent;
+            border-radius: 0;
+            pointer-events: none;
+            text-shadow: 0 1px 3px #000, 0 0 5px #000, 0 0 8px #000;
+        }
+        .card-value {
+            font-size: clamp(0.52rem, 1.35vw, 0.86rem);
+            line-height: 1;
+            text-shadow: 0 1px 3px #000, 0 0 6px #000;
+        }
+        .card-icon {
+            font-size: clamp(0.27rem, 0.68vw, 0.43rem);
+            line-height: 1.02;
+            white-space: normal;
+            text-align: center;
+            text-shadow: 0 1px 3px #000, 0 0 5px #000;
+        }
+        .player-hand-container .card .card-type-badge {
+            top: 3px;
+            left: 2px;
+            right: 2px;
+            font-size: clamp(4px, 0.9vw, 6px);
+            min-height: 0;
+            padding: 1px;
+        }
+        .player-hand-container .card .card-art {
+            position: absolute;
+            inset: 2px;
+            width: auto;
+            height: auto;
+            flex: none;
+            min-height: 0;
+            overflow: visible;
+            font-size: clamp(17px, 5vw, 29px);
+        }
+        .player-hand-container .card .card-art img {
+            width: 100%;
+            height: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .player-hand-container .card .card-bottom {
+            left: 1px;
+            right: 1px;
+            bottom: 2px;
+            min-height: 0;
+            padding: 1px;
+            gap: 1px;
+        }
+        .player-hand-container .card .card-value { font-size: clamp(7px, 1.6vw, 10px); }
+        .player-hand-container .card .card-icon { font-size: clamp(3.5px, 0.78vw, 5px); }
+        .played-card-slot .card .card-type-badge {
+            top: 5px; left: 4px; right: 4px;
+            font-size: clamp(0.48rem, 0.85vh, 0.62rem);
+        }
+        .played-card-slot .card .card-art {
+            position: absolute; inset: 4px; width: auto; height: auto; flex: none;
+        }
+        .played-card-slot .card .card-art img {
+            width: 100%; height: 100%; max-height: 100%; object-fit: contain;
+        }
+        .played-card-slot .card .card-bottom { left: 3px; right: 3px; bottom: 4px; }
+        .played-card-slot .card .card-value { font-size: clamp(0.82rem, 1.8vh, 1.18rem); }
+        .played-card-slot .card .card-icon { font-size: clamp(0.38rem, 0.7vh, 0.5rem); }
+
+        .ai-card-back { padding: 0; }
+        .card-back-art {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: inherit;
+        }
+        .card-back-default { position: relative; z-index: 1; opacity: .45; }
+        .ai-card-back::before { z-index: 2; }
+    </style>
+</head>
+<body>
+
+    <div id="game-frame">
+        <!-- ================= TELA DE LOADING ================= -->
+        <div id="loading-screen" role="status" aria-live="polite">
+            <div class="title-hero-wrap">
+                <div class="title-bg-watermark" data-title-watermark aria-hidden="true">🎮</div>
+                <div class="loading-mark">⚠️</div>
+                <div class="loading-title">DUELO DE MESTRES</div>
+            </div>
+            <div class="loading-subtitle" id="loading-status">Preparando cartas e recursos...</div>
+            <div class="loading-track"><div id="loading-progress"></div></div>
+            <div id="loading-percent">0%</div>
+        </div>
+
+        <!-- ================= TELA INICIAL ================= -->
+        <section id="start-screen" class="screen hidden">
+            <div class="title-badge">Baralho Tático 72 Cartas • Mão de 6 • 200 HP</div>
+
+            <div class="game-logo">
+                <div class="title-hero-wrap">
+                    <div class="title-bg-watermark" data-title-watermark aria-hidden="true">🎮</div>
+                    <h1>DUELO DE<br>MESTRES</h1>
+                    <p>Jogue até 2 cartas por turno até zerar os 200 HP da IA!</p>
+                </div>
+            </div>
+
+            <div class="start-actions">
+                <button id="btn-start" class="btn-primary">INICIAR PARTIDA</button>
+                <button id="btn-open-rules" class="btn-secondary">📖 REGRAS DO JOGO</button>
+            </div>
+        </section>
+
+        <!-- REGRAS EM JANELA SEPARADA -->
+        <div id="rules-modal" class="rules-modal hidden" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+            <div class="rules-panel">
+                <div class="rules-header">
+                    <div>
+                        <div class="rules-kicker">GUIA DE JOGO</div>
+                        <h2 id="rules-title">Regras do Duelo</h2>
+                    </div>
+                    <button id="btn-close-rules" class="discard-close-btn" aria-label="Fechar regras">✕</button>
+                </div>
+                <div class="rules-box">
+                <div class="rule-item">
+                    <div class="rule-icon nums" data-card-arts="odd,even">💚⚔️</div>
+                    <div class="rule-text">
+                        <h3>Números 10 a 35 (Verde & Vermelho)</h3>
+                        <p>Ímpares curam (máx 200 HP) • Pares causam dano direto.</p>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-icon mirror" data-card-art="mirror">🪞</div>
+                    <div class="rule-text">
+                        <h3>5 Espelhos • Reflexo Rival</h3>
+                        <p>Copia uma carta aleatória da mão rival (ou ecoa outro Espelho).</p>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-icon clone" data-card-art="clone">🧬</div>
+                    <div class="rule-text">
+                        <h3>5 Clonagens • Duplica sua Jogada</h3>
+                        <p>Clona outra carta do turno (qualquer ordem). Clones sem alvo na mão clonam 1 carta aleatória ainda não usada do baralho!</p>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-icon purify" data-card-art="purify">💧</div>
+                    <div class="rule-text">
+                        <h3>5 Purificar • Ação Rápida</h3>
+                        <p>Limpa Veneno, Sobrecarga, Vínculo, Maldição e remove o aviso BLOQUEADO de qualquer slot (1º ou 2º), indo direto para o lixo!</p>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-icon poison" data-card-art="poison">🧪</div>
+                    <div class="rule-text">
+                        <h3>5 Venenos & 5 Escudos <span data-card-art-inline="shield">🛡️</span></h3>
+                        <p>Veneno: +10 dano por 2 turnos • Escudo: +10 bloqueio acumulável.</p>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-icon overload" data-card-art="overload">⚡</div>
+                    <div class="rule-text">
+                        <h3>5 Choques</h3>
+                        <p>10 de dano por choque. Se usar 2 Choques no mesmo turno, os 2 slots do rival ficam bloqueados e o turno dele é anulado por completo.</p>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-icon vamp" data-card-art="vamp">🩸</div>
+                    <div class="rule-text">
+                        <h3>5 Vampíricas • Roubo de Vida</h3>
+                        <p>Causa 10 de dano e cura +10 de vida para quem jogou.</p>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-icon swap" data-card-art="swap">♻️</div>
+                    <div class="rule-text">
+                        <h3>2 Joga Fora • Troca de Mão</h3>
+                        <p>Joga fora toda a mão do rival no lixo e compra novas cartas do deck.</p>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-icon revive" data-card-art="revive">💀</div>
+                    <div class="rule-text">
+                        <h3>2 Reviver • Ressurge do Lixo</h3>
+                        <p>Ao entrar no slot, puxa e ativa 1 carta aleatória do lixo. Só pode ser jogada se houver lixo disponível.</p>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-icon link" data-card-art="link">♾️</div>
+                    <div class="rule-text">
+                        <h3>2 Vínculos • Elo de Cura</h3>
+                        <p>Causa 10 de dano e aplica Vínculo no rival por 2 turnos. Enquanto ativo, toda vez que o rival curar, o usuário também cura metade desse valor.</p>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-icon destroy" data-card-art="destroy">💥</div>
+                    <div class="rule-text">
+                        <h3>2 Destruir • Sabotagem</h3>
+                        <p>Revela 3 cartas aleatórias da mão do rival e permite escolher 1 delas para descartar imediatamente no lixo.</p>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-icon curse" data-card-art="curse">🔱</div>
+                    <div class="rule-text">
+                        <h3>2 Maldições • Punição Arcana</h3>
+                        <p>Aplica Maldição por 2 turnos: o rival perde 5 de vida toda vez que jogar uma carta especial (qualquer carta fora os números 10 a 35).</p>
+                    </div>
+                </div>
+
+                <div class="rule-item">
+                    <div class="rule-icon vision" data-card-art="vision">👁️</div>
+                    <div class="rule-text">
+                        <h3>2 Visões Totais</h3>
+                        <p>Revela as cartas da mão do oponente por 1 turno.</p>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TELA DE JOGO ================= -->
+        <section id="game-screen" class="screen hidden">
+            <div class="top-bar">
+                <div style="font-size: clamp(0.68rem, 1.38vh, 0.82rem); font-weight: 800; color: var(--text-muted);">
+                    TURNO <span id="turn-counter" style="color: #fff;">1</span>
+                </div>
+                <button id="btn-sound" class="icon-btn" title="Alternar Som">🔊 Som</button>
+            </div>
+
+            <!-- Zona da IA -->
+            <div id="ai-zone" class="player-zone">
+                <div class="player-header">
+                    <div class="player-identity">
+                        <div class="avatar ai">🤖</div>
+                        <div>
+                            <div class="player-name">IA Tática</div>
+                            <div class="status-badges" id="ai-statuses"></div>
+                        </div>
+                    </div>
+                    <div class="hp-numbers" id="ai-hp-text">200 <span>/ 200</span></div>
+                </div>
+                <div class="hp-track">
+                    <div id="ai-hp-bar" class="hp-fill" style="width: 100%;"></div>
+                </div>
+                <div id="ai-hand" class="ai-hand"></div>
+            </div>
+
+            <!-- Arena Central -->
+            <div class="arena" id="arena-box">
+                <div id="arena-bg-layer" class="arena-bg-layer" aria-hidden="true"></div>
+
+                <div class="turn-banner" id="turn-banner">
+                    <span id="turn-label">SEU TURNO</span>
+                    <div class="turn-dots">
+                        <div class="dot" id="dot-1"></div>
+                        <div class="dot" id="dot-2"></div>
+                    </div>
+                </div>
+
+                <div class="battle-stage">
+                    <div class="pile-box">
+                        <div class="pile-icon">🎴</div>
+                        <div class="pile-count" id="deck-count">72</div>
+                        <div class="pile-label">Baralho</div>
+                    </div>
+
+                    <div class="played-cards-row">
+                        <div class="played-card-slot" id="played-slot-1">
+                            <span class="placeholder-text">1ª Carta</span>
+                        </div>
+                        <div class="played-card-slot" id="played-slot-2">
+                            <span class="placeholder-text">2ª Carta</span>
+                        </div>
+                    </div>
+
+                    <div class="pile-box clickable-pile" id="discard-pile-box" title="Ver cartas que já foram para o lixo">
+                        <div class="pile-icon">🗑️</div>
+                        <div class="pile-count" id="discard-count">0</div>
+                        <div class="pile-label">Lixo</div>
+                    </div>
+                </div>
+
+                <div class="action-feed" id="action-feed">
+                    Seu turno! Escolha a 1ª carta.
+                </div>
+            </div>
+
+            <!-- Zona do Jogador -->
+            <div id="player-zone" class="player-zone active-turn">
+                <div class="player-header">
+                    <div class="player-identity">
+                        <div class="avatar human">😎</div>
+                        <div>
+                            <div class="player-name">Você</div>
+                            <div class="status-badges" id="player-statuses"></div>
+                        </div>
+                    </div>
+                    <div class="hp-numbers" id="player-hp-text">200 <span>/ 200</span></div>
+                </div>
+                <div class="hp-track">
+                    <div id="player-hp-bar" class="hp-fill" style="width: 100%;"></div>
+                </div>
+                <div id="player-hand" class="player-hand-container"></div>
+            </div>
+        </section>
+
+        <!-- ================= MODAL DO LIXO ================= -->
+        <div id="discard-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="discard-modal-title">
+            <div class="discard-panel">
+                <div class="discard-header">
+                    <div class="discard-title" id="discard-modal-title">🗑️ Cartas no Lixo (0)</div>
+                    <button id="btn-close-discard" class="discard-close-btn">✕ Fechar</button>
+                </div>
+                <div id="discard-list" class="discard-list"></div>
+            </div>
+        </div>
+
+        <!-- ================= MODAL DESTRUIR CARTA RIVAL ================= -->
+        <div id="destroy-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="destroy-modal-title">
+            <div class="destroy-panel">
+                <div class="discard-header">
+                    <div class="discard-title" id="destroy-modal-title">💥 Escolha 1 carta rival para destruir</div>
+                </div>
+                <p style="font-size: clamp(0.65rem, 1.3vh, 0.8rem); color: var(--text-muted);">
+                    3 cartas aleatórias da mão da IA foram reveladas. Clique em uma para descartá-la!
+                </p>
+                <div id="destroy-cards-grid" class="destroy-cards-grid"></div>
+            </div>
+        </div>
+
+        <!-- ================= TELA DE FIM DE JOGO ================= -->
+        <section id="gameover-screen" class="screen hidden">
+            <div class="result-header">
+                <div class="result-emoji" id="end-emoji">🏆</div>
+                <h2 class="result-title win" id="end-title">VITÓRIA!</h2>
+                <p class="result-subtitle" id="end-subtitle">Você zerou a vida da IA!</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-winner-hp" style="color: #34d399;">0</div>
+                    <div class="stat-label">Vida do Vencedor</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-turns">0</div>
+                    <div class="stat-label">Turnos Jogados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-dmg" style="color: #f87171;">0</div>
+                    <div class="stat-label">Seu Dano Causado</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-heal" style="color: #6ee7b7;">0</div>
+                    <div class="stat-label">Sua Vida Curada</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-cards-played" style="color: #38bdf8;">0</div>
+                    <div class="stat-label">Cartas Jogadas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-specials" style="color: #e879f9;">0</div>
+                    <div class="stat-label">Cartas Especiais</div>
+                </div>
+            </div>
+
+            <div class="gameover-actions">
+                <button id="btn-play-again" class="btn-primary">JOGAR NOVAMENTE</button>
+                <button id="btn-back-title" class="btn-secondary">🏠 VOLTAR AO TÍTULO</button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        /**
+         * SINTETIZADOR DE ÁUDIO WEB (Sem dependências externas)
+         */
+        class SoundFX {
+            constructor() {
+                this.enabled = true;
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) this.ctx = new AudioContext();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playTone(freq, type, duration, vol = 0.14, slideTo = null) {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                if (slideTo) {
+                    osc.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + duration);
+                }
+
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+
+            playHeal() {
+                this.playTone(440, 'sine', 0.22, 0.13, 660);
+                setTimeout(() => this.playTone(660, 'sine', 0.26, 0.11, 880), 85);
+            }
+
+            playDamage() {
+                this.playTone(185, 'sawtooth', 0.26, 0.15, 62);
+            }
+
+            playShield() {
+                this.playTone(320, 'triangle', 0.18, 0.14, 540);
+                setTimeout(() => this.playTone(540, 'sine', 0.22, 0.12, 720), 75);
+            }
+
+            playPoison() {
+                this.playTone(260, 'sawtooth', 0.16, 0.11, 190);
+                setTimeout(() => this.playTone(210, 'triangle', 0.22, 0.12, 140), 90);
+            }
+
+            playOverload() {
+                this.playTone(620, 'square', 0.12, 0.11, 240);
+                setTimeout(() => this.playTone(880, 'sawtooth', 0.2, 0.12, 160), 80);
+            }
+
+            playShortCircuit() {
+                [950, 420, 1180, 220].forEach((f, i) => {
+                    setTimeout(() => this.playTone(f, 'sawtooth', 0.18, 0.14, f * 0.6), i * 60);
+                });
+            }
+
+            playMirror() {
+                this.playTone(520, 'triangle', 0.18, 0.13, 980);
+                setTimeout(() => this.playTone(780, 'sine', 0.26, 0.13, 1240), 95);
+            }
+
+            playClone() {
+                this.playTone(480, 'sine', 0.16, 0.13, 720);
+                setTimeout(() => this.playTone(720, 'triangle', 0.22, 0.13, 1080), 80);
+            }
+
+            playPurify() {
+                [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+                    setTimeout(() => this.playTone(freq, 'sine', 0.2, 0.12, freq * 1.12), i * 55);
+                });
+            }
+
+            playVamp() {
+                this.playTone(210, 'sawtooth', 0.16, 0.13, 95);
+                setTimeout(() => this.playTone(520, 'sine', 0.24, 0.12, 780), 80);
+            }
+
+            playSwap() {
+                this.playTone(420, 'triangle', 0.14, 0.12, 320);
+                setTimeout(() => this.playTone(560, 'triangle', 0.18, 0.12, 740), 85);
+            }
+
+            playRevive() {
+                this.playTone(220, 'triangle', 0.18, 0.13, 440);
+                setTimeout(() => this.playTone(440, 'sine', 0.22, 0.13, 880), 85);
+                setTimeout(() => this.playTone(660, 'triangle', 0.24, 0.12, 1120), 170);
+            }
+
+            playVision() {
+                this.playTone(520, 'sine', 0.16, 0.12, 920);
+                setTimeout(() => this.playTone(920, 'triangle', 0.24, 0.12, 1200), 90);
+            }
+
+            playLink() {
+                this.playTone(392, 'sine', 0.18, 0.13, 587.33);
+                setTimeout(() => this.playTone(587.33, 'triangle', 0.24, 0.13, 880), 85);
+            }
+
+            playDestroy() {
+                this.playTone(150, 'sawtooth', 0.22, 0.16, 55);
+                setTimeout(() => this.playTone(110, 'square', 0.25, 0.14, 42), 70);
+            }
+
+            playCurse() {
+                this.playTone(310, 'sawtooth', 0.18, 0.13, 210);
+                setTimeout(() => this.playTone(230, 'triangle', 0.26, 0.13, 145), 95);
+            }
+
+            playResonance() {
+                [587.33, 880, 1174.66, 1567.98].forEach((freq, i) => {
+                    setTimeout(() => this.playTone(freq, 'sine', 0.25, 0.12, freq * 1.15), i * 70);
+                });
+            }
+
+            playError() {
+                this.playTone(170, 'square', 0.14, 0.1, 130);
+            }
+
+            playShuffle() {
+                for (let i = 0; i < 4; i++) {
+                    setTimeout(() => this.playTone(300 + i * 90, 'triangle', 0.08, 0.08), i * 55);
+                }
+            }
+
+            playWin() {
+                [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+                    setTimeout(() => this.playTone(f, 'triangle', 0.35, 0.14), i * 110);
+                });
+            }
+
+            playLose() {
+                [350, 310, 260, 190].forEach((f, i) => {
+                    setTimeout(() => this.playTone(f, 'sawtooth', 0.35, 0.12), i * 140);
+                });
+            }
+        }
+
+        const sfx = new SoundFX();
+
+        /**
+         * CONSTANTES E ESTADO DO JOGO
+         */
+        const MAX_HP = 200;
+        const HAND_SIZE = 6;
+        const BASE_CARDS_PER_TURN = 2;
+
+        /*
+         * ARTE ATRÁS DOS TÍTULOS (LOADING E MENU INICIAL) — COLE AQUI UM LINK DIRETO DE PNG OU GIF.
+         * Substitui o emoji gigante 🎮 atrás dos títulos. Deixe url: "" para manter o 🎮 padrão.
+         */
+        const TITLE_BG_ART = {
+            url: "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExcWdzZmxmczY1azg1bWJuNzJjdjliaTN5eGM5c3ZlMWJ0bHBoazJxdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/Rn4upPlQ9z3QloADqd/giphy.gif",
+            emoji: "🎮"
+        };
+
+        /*
+         * FUNDO DO PALCO DA ARENA DE BATALHA — COLE AQUI UM LINK DIRETO DE PNG OU GIF.
+         * Quando preenchido, ocupa todo o palco da arena (.arena) por trás de todos os elementos do jogo.
+         * Deixe url: "" para manter o fundo padrão transparente da arena.
+         */
+        const ARENA_BG_ART = {
+            url: "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExemRwcmI1YWJvNHVocTY1dmZycTlvbmNtcTF2b2pkbDN0b3FrcDNjcSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/TxVVB6PfWMjE4/giphy.gif"
+        };
+
+        /*
+         * ARTES DAS CARTAS — COLE AQUI O LINK DIRETO DE CADA PNG OU GIF.
+         * Deixe "" para usar o emoji padrão. Se um link falhar, o emoji aparece automaticamente.
+         * Estas artes também são aplicadas automaticamente na Guia de Jogo (Regras do Duelo).
+         */
+        const CARD_ARTS = {
+            odd:      { url: "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExazVtZnZmaWRzOG56ZGY3Y3RmNHoxMjhyeDZ0c2tyYmE5dmd5YXV0cSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/xUPGcgvoipFxRtpMl2/giphy.gif", emoji: "💚", label: "Cura" },
+            even:     { url: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3RvMnI0bWk3ZWt2MnBmM2d5bjU1cXdvbTg3ZWwyaXlsdW9lcWM3eiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/3HAxsqDqoDFmyQvezb/giphy.gif", emoji: "⚔️", label: "Dano" },
+            mirror:   { url: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExd214Mnk3YjdoeWszY3F3dXFrOXlxb2trNWFzaXkzaGN5d2VnMGM0ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/h7jSBqxSvebHnPrPbe/giphy.gif", emoji: "🪞", label: "Espelho" },
+            clone:    { url: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExM21peXQ3b2YycmZ6cXN6bjI0b3V6MnA2NnltbWZyd293aXFhOG82ZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/12LXQxMUQjGKc/giphy.gif", emoji: "🧬", label: "Clone" },
+            poison:   { url: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMHh5OHBpaTMwaHVwd3NwbnV2dnlucGltZ3N0ZDRoYzYwcGIwdjlrciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/UGrYGvb0doTMe9jbUZ/giphy.gif", emoji: "🧪", label: "Veneno" },
+            overload: { url: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMDF4cnV2NXJyNWllNWtqeWRiMWR5cGszcGU5cTExdWE2ZjcxeDA4ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/VwpUzkkZRTkEv8N99L/giphy.gif", emoji: "⚡", label: "Sobrecarga" },
+            shield:   { url: "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExY2Qycm1hNnh6ZWU0eHc5MTZpenI4aGsxdW1nbWZhNGRuYzRnNjVydSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/xqVEmeyCIsJBP4yN9U/giphy.gif", emoji: "🛡️", label: "Escudo" },
+            purify:   { url: "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExN3M4cmk4YmV2NGY4NHd2aHF2cjkzZjBpcHJ0OHluZWdia3ZjNWd6NCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/3o7btNo0wAhatuADKw/giphy.gif", emoji: "💧", label: "Purificar" },
+            vamp:     { url: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnQ3bnVyY3R4ZHE2Z2s2bGdzN2o0bjk3aWZnZzRiOWRvNW05Y3R1YSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/gEZMwkeMbeay9ks4ji/giphy.gif", emoji: "🩸", label: "Vampírica" },
+            swap:     { url: "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExcXF3cjU3eDJyNHVuejV4aWcxbDBqMzcycmd4NWFmZWNiMnV0dXdobiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/H68MZUw5QYZTQT5hs8/giphy.gif", emoji: "♻️", label: "Troca" },
+            revive:   { url: "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExcjF5Y3pnbWtxYmdxZzZyOWZ6Zmdkems2eXpzYmc2ODk0aGc3aWtuZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/ihPWT9fclbQyY/giphy.gif", emoji: "💀", label: "Reviver" },
+            vision:   { url: "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExbG0xbHhpeXAyMG5yZzFzeXVuamsyZGprMXJ6eHRqamplcG01dDRhaSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/hG9HSbcMUvxdE3KGu3/giphy.gif", emoji: "👁️", label: "Visão" },
+            link:     { url: "https://media4.giphy.com/media/v1.Y2lkPTZjMDliOTUydHUwZ3gxbGVzY2h0dXR1MzVmY28wZzd3MWdmbTgwMXV0Zm50ZGZ2bSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/81sN8vAMoldexFMHiD/giphy.gif", emoji: "♾️", label: "Vínculo" },
+            destroy:  { url: "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyY2VyOTN4ZnR2bDltdnlyYzE4aW4yanc2ZmcwNWFjdXQ5N3EzY3QyZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/jbihumRfrid70we6X1/giphy.gif", emoji: "💥", label: "Destruir" },
+            curse:    { url: "https://media4.giphy.com/media/v1.Y2lkPTZjMDliOTUydnVwbTF6a2QzNGFxc2lmZnI5a29oYWNoM3VoY3Q5M3hsenVhYjBpYyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/1wQequMpZFe1czGLog/giphy.gif", emoji: "🔱", label: "Maldição" }
+        };
+
+        /**
+         * APLICA A ARTE OU EMOJI GIGANTE (🎮) ATRÁS DOS TÍTULOS (LOADING E MENU INICIAL)
+         */
+        function applyTitleWatermarks() {
+            const safeUrl = typeof TITLE_BG_ART.url === 'string' ? TITLE_BG_ART.url.trim() : '';
+            const fallbackEmoji = TITLE_BG_ART.emoji || '🎮';
+
+            document.querySelectorAll('[data-title-watermark]').forEach(el => {
+                el.innerHTML = '';
+                el.classList.remove('has-custom-art');
+                if (safeUrl) {
+                    const img = document.createElement('img');
+                    img.src = safeUrl;
+                    img.alt = '';
+                    img.dataset.emojiArt = 'true';
+                    img.onload = () => el.classList.add('has-custom-art');
+                    img.onerror = () => {
+                        el.classList.remove('has-custom-art');
+                        el.textContent = fallbackEmoji;
+                    };
+                    el.appendChild(img);
+                } else {
+                    el.textContent = fallbackEmoji;
+                }
+            });
+        }
+
+        /**
+         * APLICA O FUNDO PERSONALIZADO EM TODO O PALCO DA ARENA SEM ESCONDER ELEMENTOS
+         */
+        function applyArenaBackground() {
+            const layer = document.getElementById('arena-bg-layer');
+            if (!layer) return;
+            layer.innerHTML = '';
+            const safeUrl = typeof ARENA_BG_ART.url === 'string' ? ARENA_BG_ART.url.trim() : '';
+            if (!safeUrl) {
+                layer.style.display = 'none';
+                return;
+            }
+            layer.style.display = 'block';
+            const img = document.createElement('img');
+            img.src = safeUrl;
+            img.alt = 'Fundo da arena';
+            img.dataset.emojiArt = 'true';
+            img.onerror = () => {
+                layer.innerHTML = '';
+                layer.style.display = 'none';
+            };
+            layer.appendChild(img);
+        }
+
+        /**
+         * SINCRONIZA OS ÍCONES DA GUIA DE JOGO (REGRAS) COM OS LINKS DE CARD_ARTS
+         */
+        function buildCardArtNode(type, extraClass = '') {
+            const art = CARD_ARTS[type];
+            if (!art) return document.createTextNode('');
+            const safeUrl = typeof art.url === 'string' ? art.url.trim() : '';
+            if (!safeUrl) return document.createTextNode(art.emoji);
+            const img = document.createElement('img');
+            img.src = safeUrl;
+            img.alt = art.label || type;
+            img.dataset.emojiArt = 'true';
+            if (extraClass) img.className = extraClass;
+            img.onerror = () => img.replaceWith(document.createTextNode(art.emoji));
+            return img;
+        }
+
+        function syncRulesWithCardArts() {
+            document.querySelectorAll('#rules-modal [data-card-art]').forEach(el => {
+                const type = el.getAttribute('data-card-art');
+                el.innerHTML = '';
+                el.appendChild(buildCardArtNode(type));
+            });
+
+            document.querySelectorAll('#rules-modal [data-card-arts]').forEach(el => {
+                const types = el.getAttribute('data-card-arts').split(',').map(t => t.trim()).filter(Boolean);
+                el.innerHTML = '';
+                types.forEach(type => el.appendChild(buildCardArtNode(type)));
+            });
+
+            document.querySelectorAll('#rules-modal [data-card-art-inline]').forEach(el => {
+                const type = el.getAttribute('data-card-art-inline');
+                el.innerHTML = '';
+                el.appendChild(buildCardArtNode(type, 'rule-inline-art'));
+            });
+        }
+
+        /*
+         * ARTE DO VERSO DAS CARTAS — COLE AQUI O LINK DIRETO DE UM PNG OU GIF.
+         * A imagem será usada no verso das cartas fechadas da IA.
+         * Deixe url: "" para manter o verso padrão.
+         */
+        const CARD_BACK_ART = {
+            url: "https://media2.giphy.com/media/v1.Y2lkPTZjMDliOTUyYzA4dmVua284dnNweDJsdGs0ejI5bm5ndnZoZWhsMHQ0ZHBndmFuOSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7AtHoQ9XWbpwLRxs0t/giphy.gif"
+        };
+
+        /*
+         * ARTES DE EMOJIS DA INTERFACE — OPCIONAL.
+         * Cole links diretos de PNG/GIF para substituir esses símbolos em textos, avisos e botões.
+         * Deixe vazio para manter o emoji original. A substituição é global no conteúdo visível.
+         */
+        const GLOBAL_EMOJI_ARTS = {
+            "🏠": "",
+            "📖": "https://media3.giphy.com/media/v1.Y2lkPTZjMDliOTUyeG00N24zejVuN3U4a2VkcGdkY3ZkN2VvN24yZHdnZXN3NGZuc3k5aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/d7ljLl6vpBy6bImQVy/giphy.gif",
+            "🗑": "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUya2h4ZjZjaGVyMHZvMDZpcDQ1YnA0OTRuMHU1Zzd3OXc5NGI4amdrMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/H9iBUt1bPrsfWBUeLQ/giphy.gif",
+            "⚠️": "https://media2.giphy.com/media/v1.Y2lkPTZjMDliOTUybXVnMG93ZWs4cnRpYTNwdmVvMDVzZ2gxdWxza3JtMWI0bXNlNXdudyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/L05HgB2h6qICDs5Sms/giphy.gif",
+            "😎": "https://media4.giphy.com/media/v1.Y2lkPTZjMDliOTUyeXpvY3EyYXp4a2pkenNwOWtjM2pxNGhmMzdvdDVkZzZ4eXc3emJxZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/26rhJdqrd6v1By0G1w/giphy.gif",
+            "🤖": "https://media4.giphy.com/media/v1.Y2lkPTZjMDliOTUyMGpoeDh1ZnRhOGxndjkxOWJuNmhlYWtzdTFmbDM1MHZsazg1N3IzcCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/F02FhuAXHot8QlhAl3/giphy.gif",
+            "🎴": "https://media2.giphy.com/media/v1.Y2lkPTZjMDliOTUyYzA4dmVua284dnNweDJsdGs0ejI5bm5ndnZoZWhsMHQ0ZHBndmFuOSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7AtHoQ9XWbpwLRxs0t/giphy.gif"
+        };
+
+        function applyGlobalEmojiArts(root = document.body) {
+            const configured = Object.entries(GLOBAL_EMOJI_ARTS).filter(([, url]) => typeof url === 'string' && url.trim());
+            if (!configured.length || !root) return;
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+                acceptNode(node) {
+                    const parent = node.parentElement;
+                    if (!parent || /^(SCRIPT|STYLE|TEXTAREA|INPUT|IMG)$/i.test(parent.tagName) || parent.closest('[data-emoji-art]')) return NodeFilter.FILTER_REJECT;
+                    return configured.some(([emoji]) => node.nodeValue.includes(emoji)) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                }
+            });
+            const nodes = [];
+            while (walker.nextNode()) nodes.push(walker.currentNode);
+            for (const node of nodes) {
+                let remaining = node.nodeValue;
+                const fragment = document.createDocumentFragment();
+                while (remaining) {
+                    let nextAt = -1, nextEmoji = null, nextUrl = null;
+                    for (const [emoji, url] of configured) {
+                        const at = remaining.indexOf(emoji);
+                        if (at !== -1 && (nextAt === -1 || at < nextAt)) { nextAt = at; nextEmoji = emoji; nextUrl = url; }
+                    }
+                    if (nextAt === -1) { fragment.appendChild(document.createTextNode(remaining)); break; }
+                    if (nextAt > 0) fragment.appendChild(document.createTextNode(remaining.slice(0, nextAt)));
+                    const img = document.createElement('img');
+                    img.src = nextUrl.trim(); img.alt = nextEmoji; img.dataset.emojiArt = 'true';
+                    img.style.cssText = 'display:inline-block;width:1.35em;height:1.35em;object-fit:contain;vertical-align:-0.28em;';
+                    img.onerror = () => img.replaceWith(document.createTextNode(nextEmoji));
+                    fragment.appendChild(img);
+                    remaining = remaining.slice(nextAt + nextEmoji.length);
+                }
+                node.replaceWith(fragment);
+            }
+        }
+
+        let emojiArtsObserver = null;
+        function enableGlobalEmojiArts() {
+            applyGlobalEmojiArts();
+            if (emojiArtsObserver) emojiArtsObserver.disconnect();
+            emojiArtsObserver = new MutationObserver(records => {
+                for (const record of records) {
+                    for (const node of record.addedNodes) {
+                        if (node.nodeType === Node.TEXT_NODE) applyGlobalEmojiArts(node.parentElement || document.body);
+                        else if (node.nodeType === Node.ELEMENT_NODE) applyGlobalEmojiArts(node);
+                    }
+                }
+            });
+            emojiArtsObserver.observe(document.body, { childList: true, subtree: true });
+        }
+
+        let state = {};
+
+        const els = {
+            gameFrame: document.getElementById('game-frame'),
+            startScreen: document.getElementById('start-screen'),
+            gameScreen: document.getElementById('game-screen'),
+            gameoverScreen: document.getElementById('gameover-screen'),
+            turnCounter: document.getElementById('turn-counter'),
+            aiZone: document.getElementById('ai-zone'),
+            playerZone: document.getElementById('player-zone'),
+            aiStatuses: document.getElementById('ai-statuses'),
+            playerStatuses: document.getElementById('player-statuses'),
+            aiHpText: document.getElementById('ai-hp-text'),
+            aiHpBar: document.getElementById('ai-hp-bar'),
+            aiHand: document.getElementById('ai-hand'),
+            playerHpText: document.getElementById('player-hp-text'),
+            playerHpBar: document.getElementById('player-hp-bar'),
+            playerHand: document.getElementById('player-hand'),
+            arenaBox: document.getElementById('arena-box'),
+            turnLabel: document.getElementById('turn-label'),
+            dot1: document.getElementById('dot-1'),
+            dot2: document.getElementById('dot-2'),
+            deckCount: document.getElementById('deck-count'),
+            discardCount: document.getElementById('discard-count'),
+            discardPileBox: document.getElementById('discard-pile-box'),
+            discardModal: document.getElementById('discard-modal'),
+            discardModalTitle: document.getElementById('discard-modal-title'),
+            discardList: document.getElementById('discard-list'),
+            btnCloseDiscard: document.getElementById('btn-close-discard'),
+            destroyModal: document.getElementById('destroy-modal'),
+            destroyCardsGrid: document.getElementById('destroy-cards-grid'),
+            playedSlot1: document.getElementById('played-slot-1'),
+            playedSlot2: document.getElementById('played-slot-2'),
+            actionFeed: document.getElementById('action-feed')
+        };
+
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        function isNormalCard(card) {
+            return card && (card.type === 'odd' || card.type === 'even');
+        }
+
+        function getCardMeta(card) {
+            if (!card) return { name: 'Carta', badge: '', color: '#94a3b8' };
+            if (card.type === 'odd') return { name: `Cura +${card.value}`, badge: '💚 ÍMPAR', color: '#10b981' };
+            if (card.type === 'even') return { name: `Dano -${card.value}`, badge: '⚔️ PAR', color: '#ef4444' };
+            if (card.type === 'mirror') return { name: 'Espelho', badge: '🪞 RIVAL', color: '#a855f7' };
+            if (card.type === 'clone') return { name: 'Clone', badge: '🧬 DUPLICA', color: '#ec4899' };
+            if (card.type === 'purify') return { name: 'Purificar', badge: '💧 LIMPA', color: '#38bdf8' };
+            if (card.type === 'poison') return { name: 'Veneno -10', badge: '🧪 2T', color: '#84cc16' };
+            if (card.type === 'overload') return { name: 'Sobrecarga -10', badge: '⚡ TRAVA', color: '#f59e0b' };
+            if (card.type === 'shield') return { name: 'Escudo +10', badge: '🛡️ DEF', color: '#06b6d4' };
+            if (card.type === 'vamp') return { name: 'Vampírica', badge: '🩸 -10/+10', color: '#dc2626' };
+            if (card.type === 'swap') return { name: 'Substituição', badge: '♻️ MÃO', color: '#14b8a6' };
+            if (card.type === 'revive') return { name: 'Reviver', badge: '💀 LIXO', color: '#c084fc' };
+            if (card.type === 'vision') return { name: 'Visão Total', badge: '👁 1T', color: '#d8b4fe' };
+            if (card.type === 'link') return { name: 'Vínculo -10', badge: '♾️ 2T', color: '#ec4899' };
+            if (card.type === 'destroy') return { name: 'Destruir', badge: '💥 3 CARTAS', color: '#f97316' };
+            if (card.type === 'curse') return { name: 'Maldição', badge: '🔱 -5 ESP', color: '#7c3aed' };
+            return { name: card.type, badge: '', color: '#94a3b8' };
+        }
+
+        function openDiscardModal() {
+            const list = Array.isArray(state.discard) ? state.discard : [];
+            els.discardModalTitle.textContent = `🗑️ Cartas no Lixo (${list.length})`;
+            els.discardList.innerHTML = '';
+
+            if (list.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'discard-empty';
+                empty.textContent = 'Nenhuma carta foi para o lixo ainda.';
+                els.discardList.appendChild(empty);
+            } else {
+                list.forEach((card, idx) => {
+                    const meta = getCardMeta(card);
+                    const row = document.createElement('div');
+                    row.className = 'discard-item';
+                    row.style.borderLeftColor = meta.color;
+                    row.innerHTML = `
+                        <div class="discard-item-left">
+                            <span class="discard-order">#${idx + 1}</span>
+                            <span class="discard-name">${meta.name}</span>
+                        </div>
+                        <span class="discard-tag">${meta.badge}</span>
+                    `;
+                    els.discardList.appendChild(row);
+                });
+            }
+
+            els.discardModal.classList.remove('hidden');
+        }
+
+        function closeDiscardModal() {
+            els.discardModal.classList.add('hidden');
+        }
+
+        function promptDestroyChoice(candidates) {
+            return new Promise(resolve => {
+                els.destroyCardsGrid.innerHTML = '';
+                candidates.forEach(({ card, handIndex }) => {
+                    const cardEl = document.createElement('div');
+                    cardEl.className = `card ${card.type}`;
+                    cardEl.innerHTML = buildCardHTML(card);
+                    cardEl.addEventListener('click', () => {
+                        els.destroyModal.classList.add('hidden');
+                        resolve(handIndex);
+                    });
+                    els.destroyCardsGrid.appendChild(cardEl);
+                });
+                els.destroyModal.classList.remove('hidden');
+            });
+        }
+
+        /**
+         * LIMPA VISUAL E TEXTO DE BLOQUEIO EM QUALQUER SLOT QUANDO O ALVO É PURIFICADO
+         */
+        function clearSlotLockVisual(actor) {
+            const isActorTurn = state.turn === actor;
+            if (!isActorTurn) return;
+
+            const activeInSlot1 = state.currentTurnCards.some(c => c.slotNumber === 1);
+            const activeInSlot2 = state.currentTurnCards.some(c => c.slotNumber === 2);
+
+            if (!activeInSlot1 && els.playedSlot1.classList.contains('locked-slot')) {
+                els.playedSlot1.classList.remove('locked-slot');
+                els.playedSlot1.innerHTML = `<span class="placeholder-text">1ª Carta</span>`;
+            }
+
+            if (!activeInSlot2 && els.playedSlot2.classList.contains('locked-slot')) {
+                els.playedSlot2.classList.remove('locked-slot');
+                els.playedSlot2.innerHTML = `<span class="placeholder-text">2ª Carta</span>`;
+            }
+        }
+
+        /**
+         * CRIA O BARALHO COMPLETO DE 72 CARTAS
+         */
+        function buildDeck() {
+            const deck = [];
+            let uid = 1;
+
+            // 10 a 35: Ímpares verdes (cura), Pares vermelhos (dano) — 26 cartas
+            for (let n = 10; n <= 35; n++) {
+                deck.push({
+                    id: uid++,
+                    type: n % 2 === 1 ? 'odd' : 'even',
+                    value: n
+                });
+            }
+
+            // 5 Espelhos (31)
+            for (let i = 0; i < 5; i++) {
+                deck.push({ id: uid++, type: 'mirror', value: 0, used: false });
+            }
+
+            // 5 Clonagens (36)
+            for (let i = 0; i < 5; i++) {
+                deck.push({ id: uid++, type: 'clone', value: 0 });
+            }
+
+            // 5 Purificar (41)
+            for (let i = 0; i < 5; i++) {
+                deck.push({ id: uid++, type: 'purify', value: 0 });
+            }
+
+            // 5 Venenos (46)
+            for (let i = 0; i < 5; i++) {
+                deck.push({ id: uid++, type: 'poison', value: 10 });
+            }
+
+            // 5 Sobrecargas (51)
+            for (let i = 0; i < 5; i++) {
+                deck.push({ id: uid++, type: 'overload', value: 10 });
+            }
+
+            // 5 Escudos (56)
+            for (let i = 0; i < 5; i++) {
+                deck.push({ id: uid++, type: 'shield', value: 10 });
+            }
+
+            // 5 Vampíricas (61)
+            for (let i = 0; i < 5; i++) {
+                deck.push({ id: uid++, type: 'vamp', value: 10 });
+            }
+
+            // 2 Substituições (63)
+            for (let i = 0; i < 2; i++) {
+                deck.push({ id: uid++, type: 'swap', value: 0 });
+            }
+
+            // 2 Reviver (65)
+            for (let i = 0; i < 2; i++) {
+                deck.push({ id: uid++, type: 'revive', value: 0 });
+            }
+
+            // 2 Vínculos (67)
+            for (let i = 0; i < 2; i++) {
+                deck.push({ id: uid++, type: 'link', value: 10 });
+            }
+
+            // 2 Destruir (69)
+            for (let i = 0; i < 2; i++) {
+                deck.push({ id: uid++, type: 'destroy', value: 0 });
+            }
+
+            // 2 Maldições (71)
+            for (let i = 0; i < 2; i++) {
+                deck.push({ id: uid++, type: 'curse', value: 5 });
+            }
+
+            // 2 Visões Totais (72)
+            for (let i = 0; i < 2; i++) {
+                deck.push({ id: uid++, type: 'vision', value: 0 });
+            }
+
+            return shuffleArray(deck);
+        }
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function showScreen(screenName) {
+            els.startScreen.classList.toggle('hidden', screenName !== 'start');
+            els.gameScreen.classList.toggle('hidden', screenName !== 'game');
+            els.gameoverScreen.classList.toggle('hidden', screenName !== 'gameover');
+        }
+
+        function clearCenterTable(slot2Locked = false) {
+            els.playedSlot1.classList.remove('locked-slot');
+            els.playedSlot1.innerHTML = `<span class="placeholder-text">1ª Carta</span>`;
+
+            if (slot2Locked) {
+                els.playedSlot2.classList.add('locked-slot');
+                els.playedSlot2.innerHTML = `<span class="placeholder-text">⚡ BLOQUEADO</span>`;
+            } else {
+                els.playedSlot2.classList.remove('locked-slot');
+                els.playedSlot2.innerHTML = `<span class="placeholder-text">2ª Carta</span>`;
+            }
+        }
+
+        /**
+         * INICIA A PARTIDA
+         */
+        function startGame() {
+            sfx.init();
+            closeDiscardModal();
+            els.destroyModal.classList.add('hidden');
+            applyArenaBackground();
+            const fullDeck = buildDeck();
+
+            state = {
+                playerHp: MAX_HP,
+                aiHp: MAX_HP,
+                playerShield: 0,
+                aiShield: 0,
+                playerPoisons: [],
+                aiPoisons: [],
+                playerLinkTurns: 0,
+                aiLinkTurns: 0,
+                playerCurseTurns: 0,
+                aiCurseTurns: 0,
+                pendingPlayerOverloads: 0,
+                pendingAiOverloads: 0,
+                skipNextAiTurn: false,
+                skipNextPlayerTurn: false,
+                playerSlotLocked: false,
+                aiSlotLocked: false,
+                playerVisionTurns: 0,
+                aiVisionTurns: 0,
+                deck: fullDeck,
+                discard: [],
+                playerHand: [],
+                aiHand: [],
+                turn: 'player',
+                turnNumber: 1,
+                cardsPlayedInTurn: 0,
+                maxPlaysThisTurn: BASE_CARDS_PER_TURN,
+                currentTurnCards: [],
+                isBusy: false,
+                gameOver: false,
+                stats: {
+                    playerDamageDealt: 0,
+                    playerHealed: 0,
+                    playerDamageBlocked: 0,
+                    playerCardsPlayed: 0,
+                    specialsUsed: 0
+                }
+            };
+
+            // Compra 6 cartas iniciais para cada jogador
+            for (let i = 0; i < HAND_SIZE; i++) {
+                state.playerHand.push(state.deck.pop());
+                state.aiHand.push(state.deck.pop());
+            }
+
+            clearCenterTable(false);
+            els.actionFeed.textContent = "Seu turno! Escolha a 1ª carta.";
+            showScreen('game');
+            renderAll();
+        }
+
+        function drawOneCard() {
+            if (state.deck.length === 0) {
+                if (state.discard.length === 0) return null;
+                const restored = state.discard.map(c =>
+                    c.type === 'mirror' ? { ...c, used: false } : c
+                );
+                state.deck = shuffleArray(restored);
+                state.discard = [];
+                sfx.playShuffle();
+                showToast("🔄 Baralho reembaralhado!\nTodas as cartas e Espelhos voltaram!");
+            }
+            return state.deck.pop();
+        }
+
+        /**
+         * PUXA 1 CARTA ALEATÓRIA AINDA NÃO USADA DO DECK (PARA CLONES SEM CARTA DISPONÍVEL NA MÃO)
+         */
+        function drawRandomUnusedDeckCard() {
+            if (state.deck.length === 0) {
+                return drawOneCard();
+            }
+            const randIdx = Math.floor(Math.random() * state.deck.length);
+            const [picked] = state.deck.splice(randIdx, 1);
+            return picked;
+        }
+
+        function refillHand(who) {
+            const hand = who === 'player' ? state.playerHand : state.aiHand;
+            const missingCards = Math.max(0, HAND_SIZE - hand.length);
+            for (let i = 0; i < missingCards; i++) {
+                const card = drawOneCard();
+                if (!card) break;
+                hand.push(card);
+            }
+            renderAll();
+        }
+
+        /**
+         * SE A MÃO FICAR VAZIA NO MEIO DO TURNO E AINDA HOUVER JOGADAS RESTANTES, REPÕE IMEDIATAMENTE
+         */
+        async function ensureMidTurnHandNotEmpty(who) {
+            if (state.gameOver) return;
+            const hand = who === 'player' ? state.playerHand : state.aiHand;
+            if (hand.length === 0 && state.cardsPlayedInTurn < state.maxPlaysThisTurn) {
+                refillHand(who);
+                if (hand.length > 0) {
+                    const actorName = who === 'player' ? 'Você' : 'IA';
+                    els.actionFeed.textContent = `🎴 Mão de ${actorName} zerou! Repondo cartas do baralho para continuar o turno.`;
+                    renderAll();
+                    await sleep(650);
+                }
+            }
+        }
+
+        function showToast(message) {
+            const existing = els.gameFrame.querySelector('.toast-banner');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-banner';
+            toast.innerText = message;
+            els.gameFrame.appendChild(toast);
+            setTimeout(() => toast.remove(), 2100);
+        }
+
+        function spawnFloatingNumber(targetZoneEl, text, category) {
+            const rect = targetZoneEl.getBoundingClientRect();
+            const frameRect = els.gameFrame.getBoundingClientRect();
+
+            const el = document.createElement('div');
+            el.className = `floating-number ${category}`;
+            el.textContent = text;
+            el.style.left = `${rect.left - frameRect.left + rect.width / 2}px`;
+            el.style.top = `${rect.top - frameRect.top + rect.height / 2}px`;
+
+            els.gameFrame.appendChild(el);
+            setTimeout(() => el.remove(), 1450);
+        }
+
+        function triggerZoneEffect(zoneEl, type) {
+            zoneEl.classList.remove('anim-shake', 'anim-heal');
+            void zoneEl.offsetWidth;
+            zoneEl.classList.add(type === 'dmg' ? 'anim-shake' : 'anim-heal');
+            setTimeout(() => zoneEl.classList.remove('anim-shake', 'anim-heal'), 800);
+        }
+
+        function applyDamage(target, rawDamage, category = 'dmg') {
+            const isTargetPlayer = target === 'player';
+            const zoneEl = isTargetPlayer ? els.playerZone : els.aiZone;
+            let currentShield = isTargetPlayer ? state.playerShield : state.aiShield;
+            let blocked = 0;
+            let hpLoss = rawDamage;
+
+            if (currentShield > 0) {
+                blocked = Math.min(currentShield, rawDamage);
+                currentShield -= blocked;
+                hpLoss = rawDamage - blocked;
+
+                if (isTargetPlayer) {
+                    state.playerShield = currentShield;
+                    state.stats.playerDamageBlocked += blocked;
+                } else {
+                    state.aiShield = currentShield;
+                }
+            }
+
+            if (hpLoss > 0) {
+                if (isTargetPlayer) {
+                    state.playerHp = Math.max(0, state.playerHp - hpLoss);
+                } else {
+                    state.aiHp = Math.max(0, state.aiHp - hpLoss);
+                    state.stats.playerDamageDealt += hpLoss;
+                }
+                triggerZoneEffect(zoneEl, 'dmg');
+                const label = blocked > 0 ? `-${hpLoss} (🛡️-${blocked})` : `-${hpLoss}`;
+                spawnFloatingNumber(zoneEl, label, category);
+            } else if (blocked > 0) {
+                spawnFloatingNumber(zoneEl, `🛡️ BLOQUEOU ${blocked}!`, 'shield');
+            }
+
+            return { blocked, hpLoss };
+        }
+
+        function applyHeal(target, amount, category = 'heal', fromLink = false) {
+            const isTargetPlayer = target === 'player';
+            const zoneEl = isTargetPlayer ? els.playerZone : els.aiZone;
+            const currentHp = isTargetPlayer ? state.playerHp : state.aiHp;
+            const healed = Math.min(amount, MAX_HP - currentHp);
+
+            if (isTargetPlayer) {
+                state.playerHp = Math.min(MAX_HP, currentHp + amount);
+                state.stats.playerHealed += healed;
+            } else {
+                state.aiHp = Math.min(MAX_HP, currentHp + amount);
+            }
+
+            triggerZoneEffect(zoneEl, 'heal');
+            spawnFloatingNumber(zoneEl, fromLink ? `♾️ +${healed}` : `+${healed}`, fromLink ? 'link' : category);
+
+            // Efeito Vínculo: se o alvo que curou estiver sob Vínculo e a cura não veio de um próprio Vínculo
+            if (!fromLink && healed > 0) {
+                const hasLink = isTargetPlayer ? state.playerLinkTurns > 0 : state.aiLinkTurns > 0;
+                if (hasLink) {
+                    const sharedHeal = Math.ceil(healed / 2);
+                    const beneficiary = isTargetPlayer ? 'ai' : 'player';
+                    applyHeal(beneficiary, sharedHeal, 'link', true);
+                }
+            }
+
+            return healed;
+        }
+
+        /**
+         * APLICA PUNIÇÃO DA MALDIÇÃO SE O JOGADOR USAR UMA CARTA ESPECIAL (NÃO NORMAL 10 A 35)
+         */
+        async function triggerCurseIfApplicable(actor, card) {
+            if (isNormalCard(card)) return;
+            const isPlayer = actor === 'player';
+            const curseTurns = isPlayer ? state.playerCurseTurns : state.aiCurseTurns;
+            if (curseTurns <= 0) return;
+
+            const actorName = isPlayer ? 'Você' : 'IA';
+            const selfZone = isPlayer ? els.playerZone : els.aiZone;
+
+            sfx.playCurse();
+            if (isPlayer) {
+                state.playerHp = Math.max(0, state.playerHp - 5);
+            } else {
+                state.aiHp = Math.max(0, state.aiHp - 5);
+                state.stats.playerDamageDealt += 5;
+            }
+            triggerZoneEffect(selfZone, 'dmg');
+            spawnFloatingNumber(selfZone, '🔱 -5 MALDIÇÃO!', 'curse');
+            els.actionFeed.textContent = `🔱 Maldição! ${actorName} perdeu 5 de vida por jogar carta especial!`;
+            renderAll();
+            await sleep(750);
+        }
+
+        async function processStartOfTurnEffects(who) {
+            const isPlayer = who === 'player';
+            const poisons = isPlayer ? state.playerPoisons : state.aiPoisons;
+
+            if (poisons.length > 0) {
+                let totalPoisonDmg = 0;
+                poisons.forEach(p => {
+                    totalPoisonDmg += p.damage;
+                    p.turnsLeft -= 1;
+                });
+
+                if (isPlayer) {
+                    state.playerPoisons = poisons.filter(p => p.turnsLeft > 0);
+                } else {
+                    state.aiPoisons = poisons.filter(p => p.turnsLeft > 0);
+                }
+
+                sfx.playPoison();
+                const res = applyDamage(who, totalPoisonDmg, 'poison');
+                const targetName = isPlayer ? 'Você sofreu' : 'IA sofreu';
+                els.actionFeed.textContent = `🧪 Veneno! ${targetName} ${totalPoisonDmg} de dano${res.blocked > 0 ? ` (${res.blocked} bloqueado)` : ''}!`;
+                renderAll();
+                await sleep(1150);
+
+                if (checkWinCondition()) return false;
+            }
+            return true;
+        }
+
+        function getCardDisplay(card) {
+            const definitions = {
+                odd:      { name: 'CURA', value: `+${card.value}`, detail: 'RECUPERA VIDA' },
+                even:     { name: 'DANO', value: `-${card.value}`, detail: 'ATAQUE DIRETO' },
+                mirror:   { name: 'ESPELHO', value: 'COPIA', detail: 'COPIA CARTA RIVAL' },
+                clone:    { name: 'CLONE', value: 'CLONA', detail: 'REPLICA CARTAS' },
+                poison:   { name: 'VENENO', value: '-10', detail: '2 TURNOS' },
+                overload: { name: 'CHOQUE', value: '-10', detail: 'TRAVA 1 SLOT' },
+                shield:   { name: 'ESCUDO', value: '+10', detail: 'DEFESA' },
+                purify:   { name: 'PURIFICAR', value: 'ANULA', detail: 'REMOVE EFEITOS' },
+                vamp:     { name: 'ROUBA VIDA', value: '-10/+10', detail: 'DANO + CURA' },
+                swap:     { name: 'JOGA FORA', value: 'TROCA', detail: 'MÃO DO RIVAL' },
+                revive:   { name: 'REVIVER', value: 'REVIVE', detail: 'CARTA DO LIXO' },
+                vision:   { name: 'VISÃO TOTAL', value: '1 TURNO', detail: 'REVELA A MÃO' },
+                link:     { name: 'VÍNCULO', value: '-10', detail: 'CURA 50% RIVAL' },
+                destroy:  { name: 'DESTRUIR', value: 'DESCARTE', detail: '3 CARTAS RIVAL' },
+                curse:    { name: 'MALDIÇÃO', value: '-5 ESP', detail: '2 TURNOS' }
+            };
+            return definitions[card.type] || { name: String(card.type || 'CARTA').toUpperCase(), value: '', detail: '' };
+        }
+
+        function buildCardHTML(card) {
+            const display = getCardDisplay(card);
+            const art = CARD_ARTS[card.type] || { url: '', emoji: '✦' };
+            const safeUrl = typeof art.url === 'string' ? art.url.trim() : '';
+            const visual = safeUrl
+                ? `<img src="${safeUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}" alt="${display.name}" loading="eager" onerror="this.replaceWith(document.createTextNode(${JSON.stringify(art.emoji)}))">`
+                : art.emoji;
+            return `
+                <span class="card-type-badge">${display.name}</span>
+                <span class="card-art">${visual}</span>
+                <span class="card-bottom">
+                    <span class="card-value">${display.value}</span>
+                    <span class="card-icon">${display.detail}</span>
+                </span>
+            `;
+        }
+
+        async function preloadCardArts() {
+            const assetsToLoad = Object.entries(CARD_ARTS)
+                .filter(([, art]) => art.url && art.url.trim())
+                .map(([key, art]) => ({ key, url: art.url.trim() }));
+
+            if (CARD_BACK_ART.url && CARD_BACK_ART.url.trim()) {
+                assetsToLoad.push({ key: 'card_back', url: CARD_BACK_ART.url.trim() });
+            }
+            if (TITLE_BG_ART.url && TITLE_BG_ART.url.trim()) {
+                assetsToLoad.push({ key: 'title_bg', url: TITLE_BG_ART.url.trim() });
+            }
+            if (ARENA_BG_ART.url && ARENA_BG_ART.url.trim()) {
+                assetsToLoad.push({ key: 'arena_bg', url: ARENA_BG_ART.url.trim() });
+            }
+
+            const progress = document.getElementById('loading-progress');
+            const percent = document.getElementById('loading-percent');
+            const status = document.getElementById('loading-status');
+            const total = assetsToLoad.length;
+
+            if (!total) {
+                progress.style.width = '100%';
+                percent.textContent = '100%';
+                status.textContent = 'Artes padrão prontas. Iniciando...';
+                await sleep(450);
+                return;
+            }
+
+            let completed = 0;
+            status.textContent = `Carregando artes personalizadas (0/${total})...`;
+            await Promise.all(assetsToLoad.map(({ key, url }) => new Promise(resolve => {
+                const img = new Image();
+                let finished = false;
+                const finish = (ok) => {
+                    if (finished) return;
+                    finished = true;
+                    if (!ok) console.warn(`Não foi possível carregar a arte "${key}". O recurso padrão será usado.`, url);
+                    completed++;
+                    const pct = Math.round((completed / total) * 100);
+                    progress.style.width = `${pct}%`;
+                    percent.textContent = `${pct}%`;
+                    status.textContent = `Carregando artes personalizadas (${completed}/${total})...`;
+                    resolve();
+                };
+                img.onload = () => finish(true);
+                img.onerror = () => finish(false);
+                img.src = url;
+                setTimeout(() => finish(false), 12000);
+            })));
+            status.textContent = 'Artes carregadas. Preparando o duelo...';
+            await sleep(350);
+        }
+
+        async function initializeLoadingScreen() {
+            const loading = document.getElementById('loading-screen');
+            try {
+                await preloadCardArts();
+            } catch (error) {
+                console.warn('Falha no pré-carregamento de artes; o jogo usará os emojis padrão.', error);
+            }
+            showScreen('start');
+            loading.classList.add('done');
+            setTimeout(() => loading.remove(), 450);
+        }
+
+        function renderCenterCard(slotNumber, card, transformedCard = null, badgePrefix = '') {
+            const targetSlot = slotNumber === 2 ? els.playedSlot2 : els.playedSlot1;
+            targetSlot.classList.remove('locked-slot');
+            targetSlot.innerHTML = '';
+
+            const cardEl = document.createElement('div');
+            cardEl.className = `card ${card.type}`;
+            cardEl.innerHTML = buildCardHTML(card);
+            targetSlot.appendChild(cardEl);
+
+            if (transformedCard) {
+                setTimeout(() => {
+                    if (state.gameOver) return;
+                    const copyEl = document.createElement('div');
+                    copyEl.className = `card ${transformedCard.type}`;
+                    copyEl.innerHTML = buildCardHTML(transformedCard);
+                    const badge = copyEl.querySelector('.card-type-badge');
+                    if (badge) {
+                        badge.textContent = badgePrefix ? `${badgePrefix} ${badge.textContent}` : badge.textContent;
+                    }
+                    targetSlot.innerHTML = '';
+                    targetSlot.appendChild(copyEl);
+                }, 550);
+            }
+        }
+
+        function renderStatusBadges(containerEl, shield, poisons, pendingOverloads, activeLock, visionTurns = 0, linkTurns = 0, curseTurns = 0, fullTurnSkipped = false) {
+            containerEl.innerHTML = '';
+            if (shield > 0) {
+                const b = document.createElement('span');
+                b.className = 'badge shield';
+                b.textContent = `🛡️ ${shield}`;
+                containerEl.appendChild(b);
+            }
+            if (poisons.length > 0) {
+                const totalDmg = poisons.reduce((acc, p) => acc + p.damage, 0);
+                const maxTurns = Math.max(...poisons.map(p => p.turnsLeft));
+                const b = document.createElement('span');
+                b.className = 'badge poison';
+                b.textContent = `🧪 -${totalDmg} (${maxTurns}t)`;
+                containerEl.appendChild(b);
+            }
+            if (linkTurns > 0) {
+                const b = document.createElement('span');
+                b.className = 'badge link';
+                b.textContent = `♾️ ${linkTurns}t`;
+                containerEl.appendChild(b);
+            }
+            if (curseTurns > 0) {
+                const b = document.createElement('span');
+                b.className = 'badge curse';
+                b.textContent = `🔱 -5 (${curseTurns}t)`;
+                containerEl.appendChild(b);
+            }
+            if (fullTurnSkipped) {
+                const b = document.createElement('span');
+                b.className = 'badge overload';
+                b.textContent = `⚡ -2 Slots`;
+                containerEl.appendChild(b);
+            } else if (activeLock || pendingOverloads === 1) {
+                const b = document.createElement('span');
+                b.className = 'badge overload';
+                b.textContent = `⚡ -1 Slot`;
+                containerEl.appendChild(b);
+            }
+            if (visionTurns > 0) {
+                const b = document.createElement('span');
+                b.className = 'badge vision';
+                b.textContent = `👁 ${visionTurns}t`;
+                containerEl.appendChild(b);
+            }
+        }
+
+        function renderAll() {
+            els.turnCounter.textContent = state.turnNumber;
+
+            // Vida e Status da IA
+            els.aiHpText.innerHTML = `${state.aiHp} <span>/ ${MAX_HP}</span>`;
+            const aiPct = Math.max(0, (state.aiHp / MAX_HP) * 100);
+            els.aiHpBar.style.width = `${aiPct}%`;
+            els.aiHpBar.className = `hp-fill ${aiPct <= 25 ? 'low' : aiPct <= 55 ? 'mid' : ''}`;
+            renderStatusBadges(
+                els.aiStatuses,
+                state.aiShield,
+                state.aiPoisons,
+                state.pendingAiOverloads,
+                state.aiSlotLocked,
+                state.aiVisionTurns,
+                state.aiLinkTurns,
+                state.aiCurseTurns,
+                state.skipNextAiTurn
+            );
+
+            // Vida e Status do Jogador
+            els.playerHpText.innerHTML = `${state.playerHp} <span>/ ${MAX_HP}</span>`;
+            const plPct = Math.max(0, (state.playerHp / MAX_HP) * 100);
+            els.playerHpBar.style.width = `${plPct}%`;
+            els.playerHpBar.className = `hp-fill ${plPct <= 25 ? 'low' : plPct <= 55 ? 'mid' : ''}`;
+            renderStatusBadges(
+                els.playerStatuses,
+                state.playerShield,
+                state.playerPoisons,
+                state.pendingPlayerOverloads,
+                state.playerSlotLocked,
+                state.playerVisionTurns,
+                state.playerLinkTurns,
+                state.playerCurseTurns,
+                state.skipNextPlayerTurn
+            );
+
+            els.playerZone.classList.toggle('active-turn', state.turn === 'player');
+            els.aiZone.classList.toggle('active-turn', state.turn === 'ai');
+
+            const isSlot2Locked = state.maxPlaysThisTurn === 1;
+            els.turnLabel.textContent = state.turn === 'player'
+                ? (isSlot2Locked ? 'SEU TURNO (1 CARTA)' : 'SEU TURNO')
+                : (isSlot2Locked ? 'TURNO DA IA (1 CARTA)' : 'TURNO DA IA');
+
+            els.dot1.className = `dot ${state.cardsPlayedInTurn >= 1 ? 'filled' : ''}`;
+            if (isSlot2Locked) {
+                els.dot2.className = 'dot locked';
+            } else {
+                els.dot2.className = `dot ${state.cardsPlayedInTurn >= 2 ? 'filled' : ''}`;
+            }
+
+            els.deckCount.textContent = state.deck.length;
+            els.discardCount.textContent = state.discard.length;
+
+            // Mão da IA (6 cartas padronizadas com o mesmo layout das cartas do jogador)
+            els.aiHand.innerHTML = '';
+            const revealAiHand = state.playerVisionTurns > 0;
+            for (let i = 0; i < HAND_SIZE; i++) {
+                const card = state.aiHand[i];
+                if (!card) {
+                    const emptySlot = document.createElement('div');
+                    emptySlot.className = 'ai-card-back empty';
+                    els.aiHand.appendChild(emptySlot);
+                } else if (revealAiHand) {
+                    const rev = document.createElement('div');
+                    rev.className = `card ai-card-revealed ${card.type}`;
+                    rev.innerHTML = buildCardHTML(card);
+                    els.aiHand.appendChild(rev);
+                } else {
+                    const back = document.createElement('div');
+                    back.className = 'ai-card-back';
+                    const backUrl = typeof CARD_BACK_ART.url === 'string' ? CARD_BACK_ART.url.trim() : '';
+                    if (backUrl) {
+                        const backImg = document.createElement('img');
+                        backImg.className = 'card-back-art';
+                        backImg.src = backUrl;
+                        backImg.alt = 'Verso da carta';
+                        backImg.onerror = () => backImg.remove();
+                        back.appendChild(backImg);
+                    } else {
+                        back.innerHTML = `<span class="card-back-default">✦</span>`;
+                    }
+                    els.aiHand.appendChild(back);
+                }
+            }
+
+            // Mão do Jogador (6 slots padronizados)
+            els.playerHand.innerHTML = '';
+            const canInteract = state.turn === 'player' && !state.isBusy && !state.gameOver;
+            const isOverloadSingleSlot = state.maxPlaysThisTurn === 1;
+            const hasDiscard = state.discard.length > 0;
+
+            for (let i = 0; i < HAND_SIZE; i++) {
+                const card = state.playerHand[i];
+                const slot = document.createElement('div');
+
+                if (!card) {
+                    slot.className = 'card empty-slot';
+                } else {
+                    const isCloneBlockedBySingleSlot = card.type === 'clone' && isOverloadSingleSlot;
+                    const isReviveBlockedByEmptyDiscard = card.type === 'revive' && !hasDiscard;
+                    const isUnavailable = isCloneBlockedBySingleSlot || isReviveBlockedByEmptyDiscard;
+
+                    slot.className = `card ${card.type} ${canInteract ? '' : 'disabled'} ${isUnavailable ? 'slot-unavailable' : ''}`;
+                    slot.innerHTML = buildCardHTML(card);
+                    if (canInteract) {
+                        slot.addEventListener('click', () => handlePlayerCardClick(i));
+                    }
+                }
+                els.playerHand.appendChild(slot);
+            }
+        }
+
+        /**
+         * RESOLVE E APLICA O EFEITO DE UMA CARTA (ORIGINAL, COPIADA POR ESPELHO, CLONADA OU REVIVIDA)
+         */
+        async function resolveSingleCardAction(actor, physicalCard, actionCard, slotNumber, sourceTag = null, depth = 0) {
+            const isPlayer = actor === 'player';
+            const actorName = isPlayer ? 'Você' : 'IA';
+            const opponent = isPlayer ? 'ai' : 'player';
+            const opponentHand = isPlayer ? state.aiHand : state.playerHand;
+            const selfZone = isPlayer ? els.playerZone : els.aiZone;
+            const oppZone = isPlayer ? els.aiZone : els.playerZone;
+
+            let effectiveCard = actionCard;
+            let copiedFromMirror = null;
+            let isResonance = false;
+
+            if (actionCard.type === 'revive') {
+                sfx.playRevive();
+                if (state.discard.length > 0 && depth < 3) {
+                    const randDiscardIdx = Math.floor(Math.random() * state.discard.length);
+                    const [revivedCard] = state.discard.splice(randDiscardIdx, 1);
+                    els.discardCount.textContent = state.discard.length;
+
+                    spawnFloatingNumber(selfZone, `💀 REVIVEU!`, 'revive');
+                    renderCenterCard(slotNumber, physicalCard, revivedCard, sourceTag ? `${sourceTag}💀` : '💀');
+                    await sleep(620);
+
+                    await resolveSingleCardAction(actor, physicalCard, revivedCard, slotNumber, sourceTag ? `${sourceTag}💀` : '💀', depth + 1);
+                    state.discard.push(revivedCard.type === 'mirror' ? { ...revivedCard, used: true } : revivedCard);
+                    return;
+                } else {
+                    renderCenterCard(slotNumber, physicalCard);
+                    els.actionFeed.textContent = `💀 ${actorName} tentou Reviver, mas o lixo está vazio!`;
+                    await sleep(1050);
+                    return;
+                }
+            }
+
+            if (actionCard.type === 'mirror') {
+                sfx.playMirror();
+                if (opponentHand.length > 0) {
+                    const randIdx = Math.floor(Math.random() * opponentHand.length);
+                    const targetCard = opponentHand[randIdx];
+
+                    if (targetCard.type === 'mirror' || targetCard.type === 'clone' || targetCard.type === 'revive') {
+                        isResonance = true;
+                        const randomNum = Math.floor(Math.random() * 26) + 10;
+                        const echoCard = {
+                            type: randomNum % 2 === 1 ? 'odd' : 'even',
+                            value: randomNum
+                        };
+                        copiedFromMirror = echoCard;
+                        effectiveCard = echoCard;
+                        sfx.playResonance();
+                        spawnFloatingNumber(els.arenaBox, '🪞✨ RESSONÂNCIA!', 'mirror');
+                        renderCenterCard(slotNumber, physicalCard, copiedFromMirror, sourceTag ? `${sourceTag}🪞✨` : '🪞✨');
+                        await sleep(680);
+                    } else {
+                        copiedFromMirror = targetCard;
+                        effectiveCard = targetCard;
+                        renderCenterCard(slotNumber, physicalCard, copiedFromMirror, sourceTag ? `${sourceTag}🪞` : '🪞');
+                        await sleep(600);
+                    }
+                } else {
+                    renderCenterCard(slotNumber, physicalCard);
+                    els.actionFeed.textContent = `🪞 ${actorName} ativou Espelho, mas o rival estava sem cartas!`;
+                    await sleep(1050);
+                    return;
+                }
+            } else if (sourceTag) {
+                renderCenterCard(slotNumber, physicalCard, effectiveCard, sourceTag);
+                await sleep(540);
+            } else {
+                renderCenterCard(slotNumber, physicalCard);
+            }
+
+            const prefixLabel = sourceTag
+                ? `${sourceTag} `
+                : (copiedFromMirror ? '🪞 ' : '');
+
+            if (effectiveCard.type === 'clone') {
+                const turnTarget = [...state.currentTurnCards].reverse().find(entry =>
+                    entry.card !== physicalCard && entry.card.type !== 'clone'
+                );
+                if (turnTarget && depth < 3) {
+                    sfx.playClone();
+                    spawnFloatingNumber(selfZone, '🧬 CLONE DO TURNO!', 'clone');
+                    await resolveSingleCardAction(actor, physicalCard, turnTarget.card, slotNumber,
+                        sourceTag ? `${sourceTag}🧬` : '🧬', depth + 1);
+                } else if (depth < 3) {
+                    const deckTarget = drawRandomUnusedDeckCard();
+                    if (deckTarget) {
+                        sfx.playClone();
+                        spawnFloatingNumber(selfZone, '🧬 CLONE DO BARALHO!', 'clone');
+                        await resolveSingleCardAction(actor, physicalCard, deckTarget, slotNumber,
+                            sourceTag ? `${sourceTag}🧬🎴` : '🧬🎴', depth + 1);
+                        state.discard.push(deckTarget);
+                    } else {
+                        els.actionFeed.textContent = `${actorName} ativou Clonagem, mas não havia carta disponível para copiar.`;
+                    }
+                } else {
+                    els.actionFeed.textContent = `${actorName} ativou Clonagem, mas o limite de encadeamento foi atingido.`;
+                }
+
+            } else if (effectiveCard.type === 'odd') {
+                const healAmount = effectiveCard.value;
+                applyHeal(actor, healAmount, sourceTag ? 'clone' : 'heal');
+                sfx.playHeal();
+                els.actionFeed.textContent = isResonance
+                    ? `🪞✨ Eco de Espelho curou +${healAmount} HP!`
+                    : `${prefixLabel}${actorName} curou +${healAmount} HP!`;
+
+            } else if (effectiveCard.type === 'even') {
+                const dmgAmount = effectiveCard.value;
+                sfx.playDamage();
+                const res = applyDamage(opponent, dmgAmount, sourceTag ? 'clone' : 'dmg');
+                els.actionFeed.textContent = isResonance
+                    ? `🪞✨ Eco de Espelho causou ${dmgAmount} de dano!`
+                    : `${prefixLabel}${actorName} causou ${dmgAmount} de dano${res.blocked > 0 ? ` (${res.blocked} bloqueado)` : ''}!`;
+
+            } else if (effectiveCard.type === 'vamp') {
+                sfx.playVamp();
+                const res = applyDamage(opponent, 10, sourceTag ? 'clone' : 'vamp');
+                const healed = applyHeal(actor, 10, 'vamp');
+                els.actionFeed.textContent = `${prefixLabel}🩸 ${actorName} causou ${res.hpLoss} dano e roubou +${healed} HP!`;
+
+            } else if (effectiveCard.type === 'link') {
+                sfx.playLink();
+                const res = applyDamage(opponent, 10, sourceTag ? 'clone' : 'link');
+                if (isPlayer) {
+                    state.aiLinkTurns = 2;
+                } else {
+                    state.playerLinkTurns = 2;
+                }
+                spawnFloatingNumber(oppZone, '♾️ VINCULADO (2T)!', 'link');
+                els.actionFeed.textContent = `${prefixLabel}♾️ ${actorName} causou ${res.hpLoss} dano e aplicou Vínculo por 2 turnos!`;
+
+            } else if (effectiveCard.type === 'destroy') {
+                sfx.playDestroy();
+                if (opponentHand.length === 0) {
+                    els.actionFeed.textContent = `${prefixLabel}💥 ${actorName} usou Destruir, mas o rival não tinha cartas na mão!`;
+                } else {
+                    const indices = opponentHand.map((_, idx) => idx);
+                    const revealedIndices = shuffleArray(indices).slice(0, Math.min(3, indices.length));
+
+                    let chosenHandIndex = revealedIndices[0];
+                    if (isPlayer) {
+                        const candidates = revealedIndices.map(idx => ({ card: opponentHand[idx], handIndex: idx }));
+                        els.actionFeed.textContent = `💥 Escolha 1 das 3 cartas reveladas da IA para descartar!`;
+                        renderAll();
+                        chosenHandIndex = await promptDestroyChoice(candidates);
+                    } else {
+                        let highestThreat = -Infinity;
+                        revealedIndices.forEach(idx => {
+                            const c = opponentHand[idx];
+                            const threat = c.type === 'even' ? c.value * 1.4
+                                : c.type === 'odd' ? c.value * 1.2
+                                : (c.type === 'overload' || c.type === 'poison' || c.type === 'curse' || c.type === 'link') ? 45
+                                : 32;
+                            if (threat > highestThreat) {
+                                highestThreat = threat;
+                                chosenHandIndex = idx;
+                            }
+                        });
+                    }
+
+                    const [destroyedCard] = opponentHand.splice(chosenHandIndex, 1);
+                    state.discard.push(destroyedCard);
+                    const meta = getCardMeta(destroyedCard);
+                    spawnFloatingNumber(oppZone, `💥 DESTRUIU ${meta.name.toUpperCase()}!`, 'destroy');
+                    els.actionFeed.textContent = `${prefixLabel}💥 ${actorName} destruiu "${meta.name}" da mão rival!`;
+                }
+
+            } else if (effectiveCard.type === 'curse') {
+                sfx.playCurse();
+                if (isPlayer) {
+                    state.aiCurseTurns = 2;
+                } else {
+                    state.playerCurseTurns = 2;
+                }
+                triggerZoneEffect(oppZone, 'dmg');
+                spawnFloatingNumber(oppZone, '🔱 AMALDIÇOADO (2T)!', 'curse');
+                els.actionFeed.textContent = `${prefixLabel}🔱 ${actorName} aplicou Maldição por 2 turnos (-5 HP por carta especial)!`;
+
+            } else if (effectiveCard.type === 'swap') {
+                sfx.playSwap();
+                const oppCount = opponentHand.length;
+                while (opponentHand.length > 0) {
+                    state.discard.push(opponentHand.pop());
+                }
+                for (let i = 0; i < oppCount; i++) {
+                    const drawn = drawOneCard();
+                    if (!drawn) break;
+                    opponentHand.push(drawn);
+                }
+                spawnFloatingNumber(oppZone, `♻️ MÃO TROCADA (${oppCount})`, 'swap');
+                els.actionFeed.textContent = `${prefixLabel}♻️ ${actorName} substituiu toda a mão do rival (${oppCount} cartas)!`;
+
+            } else if (effectiveCard.type === 'vision') {
+                sfx.playVision();
+                if (isPlayer) state.playerVisionTurns = 1;
+                else state.aiVisionTurns = 1;
+                spawnFloatingNumber(oppZone, '👁 MÃO REVELADA!', 'vision');
+                els.actionFeed.textContent = `${prefixLabel}👁 ${actorName} ativou Visão Total por 1 turno!`;
+
+            } else if (effectiveCard.type === 'shield') {
+                const shieldGain = 10;
+                if (isPlayer) state.playerShield += shieldGain;
+                else state.aiShield += shieldGain;
+
+                sfx.playShield();
+                triggerZoneEffect(selfZone, 'heal');
+                spawnFloatingNumber(selfZone, `+${shieldGain} 🛡️`, sourceTag ? 'clone' : 'shield');
+                els.actionFeed.textContent = `${prefixLabel}${actorName} ganhou +10 de Escudo!`;
+
+            } else if (effectiveCard.type === 'purify') {
+                sfx.playPurify();
+                triggerZoneEffect(selfZone, 'heal');
+
+                let removedItems = [];
+                if (isPlayer) {
+                    if (state.playerPoisons.length > 0) {
+                        removedItems.push(`Veneno (${state.playerPoisons.length}x)`);
+                        state.playerPoisons = [];
+                    }
+                    if (state.playerLinkTurns > 0) {
+                        removedItems.push('Vínculo');
+                        state.playerLinkTurns = 0;
+                    }
+                    if (state.playerCurseTurns > 0) {
+                        removedItems.push('Maldição');
+                        state.playerCurseTurns = 0;
+                    }
+                    if (state.playerSlotLocked || state.pendingPlayerOverloads > 0) {
+                        removedItems.push('Sobrecarga');
+                        state.playerSlotLocked = false;
+                        state.pendingPlayerOverloads = 0;
+                        state.maxPlaysThisTurn = BASE_CARDS_PER_TURN;
+                        clearSlotLockVisual('player');
+                    }
+                } else {
+                    if (state.aiPoisons.length > 0) {
+                        removedItems.push(`Veneno (${state.aiPoisons.length}x)`);
+                        state.aiPoisons = [];
+                    }
+                    if (state.aiLinkTurns > 0) {
+                        removedItems.push('Vínculo');
+                        state.aiLinkTurns = 0;
+                    }
+                    if (state.aiCurseTurns > 0) {
+                        removedItems.push('Maldição');
+                        state.aiCurseTurns = 0;
+                    }
+                    if (state.aiSlotLocked || state.pendingAiOverloads > 0) {
+                        removedItems.push('Sobrecarga');
+                        state.aiSlotLocked = false;
+                        state.pendingAiOverloads = 0;
+                        state.maxPlaysThisTurn = BASE_CARDS_PER_TURN;
+                        clearSlotLockVisual('ai');
+                    }
+                }
+
+                spawnFloatingNumber(selfZone, `💧 PURIFICADO! +SLOT LIVRE`, sourceTag ? 'clone' : 'purify');
+                if (removedItems.length > 0) {
+                    els.actionFeed.textContent = `${prefixLabel}${actorName} purificou (${removedItems.join(', ')}) e limpou ⚡ BLOQUEADO!`;
+                } else {
+                    els.actionFeed.textContent = `${prefixLabel}${actorName} usou Purificar e limpou bloqueios de slot!`;
+                }
+
+            } else if (effectiveCard.type === 'poison') {
+                const targetPoisons = isPlayer ? state.aiPoisons : state.playerPoisons;
+                targetPoisons.push({ damage: 10, turnsLeft: 2 });
+
+                sfx.playPoison();
+                triggerZoneEffect(oppZone, 'dmg');
+                spawnFloatingNumber(oppZone, `🧪 ENVENENADO!`, sourceTag ? 'clone' : 'poison');
+                els.actionFeed.textContent = `${prefixLabel}${actorName} aplicou Veneno (10 dano por 2 turnos)!`;
+
+            } else if (effectiveCard.type === 'overload') {
+                sfx.playOverload();
+                applyDamage(opponent, 10, sourceTag ? 'clone' : 'overload');
+
+                if (isPlayer) {
+                    state.pendingAiOverloads += 1;
+                    if (state.pendingAiOverloads >= 2) {
+                        state.pendingAiOverloads = 0;
+                        state.skipNextAiTurn = true;
+                        state.aiSlotLocked = true;
+                        await sleep(350);
+                        sfx.playShortCircuit();
+                        showToast("⚡⚡ DUPLO CHOQUE!\nOs 2 slots da IA foram bloqueados. O turno rival será anulado!");
+                        els.actionFeed.textContent = `⚡⚡ DUPLO CHOQUE! Você anulou o próximo turno da IA.`;
+                    } else {
+                        els.actionFeed.textContent = `${prefixLabel}${actorName} causou 10 dano e bloqueou 1 slot da IA!`;
+                    }
+                } else {
+                    state.pendingPlayerOverloads += 1;
+                    if (state.pendingPlayerOverloads >= 2) {
+                        state.pendingPlayerOverloads = 0;
+                        state.skipNextPlayerTurn = true;
+                        state.playerSlotLocked = true;
+                        await sleep(350);
+                        sfx.playShortCircuit();
+                        showToast("⚡⚡ DUPLO CHOQUE!\nSeus 2 slots foram bloqueados. Seu próximo turno será anulado!");
+                        els.actionFeed.textContent = `⚡⚡ DUPLO CHOQUE! A IA anulou seu próximo turno.`;
+                    } else {
+                        els.actionFeed.textContent = `${prefixLabel}IA causou 10 dano e bloqueou 1 slot seu!`;
+                    }
+                }
+            }
+
+            renderAll();
+            await sleep(1150);
+        }
+
+        function checkWinCondition() {
+            if (state.aiHp <= 0 || state.playerHp <= 0) {
+                state.gameOver = true;
+                const playerWon = state.aiHp <= 0;
+                endGame(playerWon);
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * EXECUTA PURIFICAR COMO AÇÃO RÁPIDA (EXIBE NO SLOT LIVRE, LIMPA BLOQUEIOS DE QUALQUER SLOT E VAI PARA O LIXO)
+         */
+        async function executeFastPurify(actor, card) {
+            const isPlayer = actor === 'player';
+            const actorName = isPlayer ? 'Você' : 'IA';
+            const selfZone = isPlayer ? els.playerZone : els.aiZone;
+
+            await triggerCurseIfApplicable(actor, card);
+            if (checkWinCondition()) return;
+
+            if (isPlayer) {
+                state.stats.playerCardsPlayed++;
+                state.stats.specialsUsed++;
+            }
+
+            const previewSlotNum = state.cardsPlayedInTurn === 0 ? 1 : 2;
+            const previewSlotEl = previewSlotNum === 2 ? els.playedSlot2 : els.playedSlot1;
+
+            renderCenterCard(previewSlotNum, card);
+
+            sfx.playPurify();
+            triggerZoneEffect(selfZone, 'heal');
+
+            let removedItems = [];
+            if (isPlayer) {
+                if (state.playerPoisons.length > 0) {
+                    removedItems.push(`Veneno (${state.playerPoisons.length}x)`);
+                    state.playerPoisons = [];
+                }
+                if (state.playerLinkTurns > 0) {
+                    removedItems.push('Vínculo');
+                    state.playerLinkTurns = 0;
+                }
+                if (state.playerCurseTurns > 0) {
+                    removedItems.push('Maldição');
+                    state.playerCurseTurns = 0;
+                }
+                if (state.playerSlotLocked || state.pendingPlayerOverloads > 0) {
+                    removedItems.push('Sobrecarga');
+                    state.playerSlotLocked = false;
+                    state.pendingPlayerOverloads = 0;
+                    state.maxPlaysThisTurn = BASE_CARDS_PER_TURN;
+                }
+            } else {
+                if (state.aiPoisons.length > 0) {
+                    removedItems.push(`Veneno (${state.aiPoisons.length}x)`);
+                    state.aiPoisons = [];
+                }
+                if (state.aiLinkTurns > 0) {
+                    removedItems.push('Vínculo');
+                    state.aiLinkTurns = 0;
+                }
+                if (state.aiCurseTurns > 0) {
+                    removedItems.push('Maldição');
+                    state.aiCurseTurns = 0;
+                }
+                if (state.aiSlotLocked || state.pendingAiOverloads > 0) {
+                    removedItems.push('Sobrecarga');
+                    state.aiSlotLocked = false;
+                    state.pendingAiOverloads = 0;
+                    state.maxPlaysThisTurn = BASE_CARDS_PER_TURN;
+                }
+            }
+
+            const hasPendingClone = state.currentTurnCards.some(c => c.card.type === 'clone');
+            spawnFloatingNumber(selfZone, '💧 PURIFICADO! +SLOT LIVRE', 'purify');
+
+            if (removedItems.length > 0) {
+                els.actionFeed.textContent = hasPendingClone
+                    ? `💧 ${actorName} purificou (${removedItems.join(', ')})! Clone ainda aguarda carta!`
+                    : `💧 ${actorName} purificou (${removedItems.join(', ')})! Slots liberados!`;
+            } else {
+                els.actionFeed.textContent = hasPendingClone
+                    ? `💧 ${actorName} usou Purificar (ação rápida)! Clone ainda aguarda carta!`
+                    : `💧 ${actorName} usou Purificar (ação rápida)! 2 slots livres!`;
+            }
+
+            renderAll();
+            await sleep(1050);
+
+            const renderedCard = previewSlotEl.querySelector('.card');
+            if (renderedCard) {
+                renderedCard.classList.add('purify-vanish');
+                await sleep(400);
+            }
+
+            state.discard.push(card);
+            previewSlotEl.classList.remove('locked-slot');
+            previewSlotEl.innerHTML = `<span class="placeholder-text">${previewSlotNum === 1 ? '1ª Carta' : '2ª Carta'}</span>`;
+
+            clearSlotLockVisual(actor);
+
+            renderAll();
+        }
+
+        /**
+         * PROCESSA A JOGADA DE UMA CARTA NOS SLOTS CENTRAIS
+         */
+        async function playCardInTurn(actor, card, slotNumber, isFinalCardOfTurn = false) {
+            const isPlayer = actor === 'player';
+            const actorName = isPlayer ? 'Você' : 'IA';
+            const selfZone = isPlayer ? els.playerZone : els.aiZone;
+            const actorHand = isPlayer ? state.playerHand : state.aiHand;
+
+            await triggerCurseIfApplicable(actor, card);
+            if (checkWinCondition()) return;
+
+            if (isPlayer) {
+                state.stats.playerCardsPlayed++;
+                if (!isNormalCard(card)) {
+                    state.stats.specialsUsed++;
+                }
+            }
+
+            state.currentTurnCards.push({ card, slotNumber });
+
+            if (card.type === 'clone') {
+                const partnerEntry = state.currentTurnCards.find(entry => entry.card.type !== 'clone');
+                const hasPlayableTargetInHand = actorHand.some(c =>
+                    c.type !== 'clone' && !(c.type === 'revive' && state.discard.length === 0)
+                );
+
+                if (partnerEntry) {
+                    sfx.playClone();
+                    spawnFloatingNumber(selfZone, '🧬 CLONAGEM!', 'clone');
+                    await resolveSingleCardAction(actor, card, partnerEntry.card, slotNumber, '🧬');
+                } else if (state.maxPlaysThisTurn === 1) {
+                    renderCenterCard(slotNumber, card);
+                    sfx.playError();
+                    els.actionFeed.textContent = `🧬 ${actorName} não pôde clonar sem um 2º slot livre!`;
+                    renderAll();
+                    await sleep(1100);
+                } else if (isFinalCardOfTurn || !hasPlayableTargetInHand) {
+                    const deckCard = drawRandomUnusedDeckCard();
+                    if (deckCard) {
+                        sfx.playClone();
+                        spawnFloatingNumber(selfZone, '🧬 DECK CLONADO!', 'clone');
+                        els.actionFeed.textContent = `🧬 ${actorName} clonou uma carta aleatória ainda não usada do baralho!`;
+                        await resolveSingleCardAction(actor, card, deckCard, slotNumber, '🧬🎴');
+                        state.discard.push(deckCard);
+                    } else {
+                        renderCenterCard(slotNumber, card);
+                        els.actionFeed.textContent = `🧬 ${actorName} não encontrou carta disponível para clonar!`;
+                        await sleep(1050);
+                    }
+                } else {
+                    renderCenterCard(slotNumber, card);
+                    sfx.playClone();
+                    spawnFloatingNumber(selfZone, '🧬 ESCOLHA A CARTA...', 'clone');
+                    els.actionFeed.textContent = `🧬 ${actorName} preparou Clonagem! Escolha a carta para clonar.`;
+                    renderAll();
+                    await sleep(900);
+                }
+            } else {
+                const pendingClones = state.currentTurnCards.filter(
+                    entry => entry.card.type === 'clone' && entry.slotNumber !== slotNumber
+                );
+
+                await resolveSingleCardAction(actor, card, card, slotNumber, null);
+
+                for (const pClone of pendingClones) {
+                    if (checkWinCondition()) return;
+                    await sleep(360);
+                    sfx.playClone();
+                    spawnFloatingNumber(selfZone, '🧬 CLONE ATIVADO!', 'clone');
+                    await resolveSingleCardAction(actor, pClone.card, card, pClone.slotNumber, '🧬');
+                }
+            }
+
+            if (card.type === 'mirror') {
+                state.discard.push({ ...card, used: true });
+            } else {
+                state.discard.push(card);
+            }
+            renderAll();
+        }
+
+        /**
+         * CLIQUE DO JOGADOR EM UMA CARTA
+         */
+        async function handlePlayerCardClick(index) {
+            if (state.turn !== 'player' || state.isBusy || state.gameOver) return;
+            const card = state.playerHand[index];
+            if (!card) return;
+
+            if (card.type === 'purify') {
+                state.isBusy = true;
+                state.playerHand.splice(index, 1);
+                renderAll();
+
+                await executeFastPurify('player', card);
+                if (checkWinCondition()) return;
+
+                await ensureMidTurnHandNotEmpty('player');
+                if (checkWinCondition()) return;
+
+                state.isBusy = false;
+                const playedClone = state.currentTurnCards.some(c => c.card.type === 'clone');
+                if (playedClone) {
+                    els.actionFeed.textContent = "🧬 Escolha a carta da mão que será clonada!";
+                } else if (state.cardsPlayedInTurn === 0) {
+                    els.actionFeed.textContent = "Slots livres! Escolha a 1ª carta.";
+                } else {
+                    els.actionFeed.textContent = "Escolha a 2ª carta do seu turno!";
+                }
+                renderAll();
+                return;
+            }
+
+            if (card.type === 'revive' && state.discard.length === 0) {
+                sfx.playError();
+                showToast("💀🚫 Lixo vazio!\nVocê só pode jogar Reviver quando houver carta no lixo.");
+                return;
+            }
+
+            if (card.type === 'clone' && state.maxPlaysThisTurn === 1) {
+                sfx.playError();
+                showToast("⚡🚫 Slot bloqueado por Sobrecarga!\nVocê não pode usar Clonagem sem um 2º slot livre.");
+                return;
+            }
+
+            state.isBusy = true;
+            state.playerHand.splice(index, 1);
+            state.cardsPlayedInTurn++;
+            const currentSlot = state.cardsPlayedInTurn;
+            const isFinalCardOfTurn = currentSlot >= state.maxPlaysThisTurn;
+            renderAll();
+
+            await playCardInTurn('player', card, currentSlot, isFinalCardOfTurn);
+            if (checkWinCondition()) return;
+
+            if (state.cardsPlayedInTurn < state.maxPlaysThisTurn) {
+                await ensureMidTurnHandNotEmpty('player');
+                if (checkWinCondition()) return;
+
+                state.isBusy = false;
+                const playedClone = state.currentTurnCards.some(c => c.card.type === 'clone');
+                els.actionFeed.textContent = playedClone
+                    ? "🧬 Escolha a carta para clonar!"
+                    : "Escolha a 2ª carta do seu turno!";
+                renderAll();
+            } else {
+                els.actionFeed.textContent = "Limpando mesa e repondo cartas...";
+                await sleep(650);
+                refillHand('player');
+
+                if (state.playerVisionTurns > 0) {
+                    state.playerVisionTurns -= 1;
+                }
+                if (state.playerLinkTurns > 0) {
+                    state.playerLinkTurns -= 1;
+                }
+                if (state.playerCurseTurns > 0) {
+                    state.playerCurseTurns -= 1;
+                }
+
+                state.aiSlotLocked = state.pendingAiOverloads === 1;
+                state.pendingAiOverloads = 0;
+
+                state.turn = 'ai';
+                state.cardsPlayedInTurn = 0;
+                state.currentTurnCards = [];
+                state.maxPlaysThisTurn = state.aiSlotLocked ? 1 : BASE_CARDS_PER_TURN;
+                clearCenterTable(state.aiSlotLocked);
+                renderAll();
+
+                if (state.skipNextAiTurn) {
+                    state.skipNextAiTurn = false;
+                    state.aiSlotLocked = false;
+                    state.turnNumber++;
+                    state.turn = 'player';
+                    state.cardsPlayedInTurn = 0;
+                    state.currentTurnCards = [];
+                    state.maxPlaysThisTurn = BASE_CARDS_PER_TURN;
+                    clearCenterTable(false);
+                    showToast("⚡🚫 TURNO DA IA ANULADO!\nOs dois slots foram bloqueados pelo Duplo Choque.");
+                    els.actionFeed.textContent = "⚡ Turno da IA anulado! Jogue novamente.";
+                    renderAll();
+                    const playerAlive = await processStartOfTurnEffects('player');
+                    if (!playerAlive || state.gameOver) return;
+                    state.isBusy = false;
+                    renderAll();
+                } else {
+                    await runAiTurn();
+                }
+            }
+        }
+
+        /**
+         * INTELIGÊNCIA ARTIFICIAL ESTRATÉGICA APRIMORADA
+         */
+        function getEstimatedDiscardValue() {
+            if (state.discard.length === 0) return -100;
+            const scores = state.discard.map(dc => {
+                if (dc.type === 'even') return dc.value * 1.25;
+                if (dc.type === 'odd') return state.aiHp < MAX_HP ? Math.min(dc.value, MAX_HP - state.aiHp) * 1.4 : 4;
+                if (dc.type === 'vamp') return 36;
+                if (dc.type === 'poison') return 42;
+                if (dc.type === 'overload') return 52;
+                if (dc.type === 'shield') return 32;
+                if (dc.type === 'link') return 40;
+                if (dc.type === 'destroy') return 38;
+                if (dc.type === 'curse') return 38;
+                if (dc.type === 'swap') return 28;
+                if (dc.type === 'vision') return 24;
+                if (dc.type === 'purify') return (state.aiPoisons.length > 0 || state.aiSlotLocked || state.aiLinkTurns > 0 || state.aiCurseTurns > 0) ? 40 : 6;
+                return 16;
+            });
+            return scores.reduce((a, b) => a + b, 0) / scores.length;
+        }
+
+        function getEstimatedDeckCardValue() {
+            if (state.deck.length === 0) return 22;
+            const sampleSize = Math.min(state.deck.length, 15);
+            let sum = 0;
+            for (let i = 0; i < sampleSize; i++) {
+                const idx = Math.floor(Math.random() * state.deck.length);
+                const c = state.deck[idx];
+                if (c.type === 'even') sum += c.value * 1.15;
+                else if (c.type === 'odd') sum += state.aiHp < 170 ? c.value * 1.1 : c.value * 0.4;
+                else if (c.type === 'vamp') sum += 34;
+                else if (c.type === 'poison' || c.type === 'overload' || c.type === 'link' || c.type === 'curse') sum += 36;
+                else sum += 24;
+            }
+            return sum / sampleSize;
+        }
+
+        function getSingleCardScoreForAi(card, simulatedOverloads = 0, simulatedStatus = null, remainingHand = null) {
+            const aiHp = state.aiHp;
+            const aiShield = state.aiShield;
+            const playerHp = state.playerHp;
+            const playerShield = state.playerShield;
+            const effectivePlayerPool = playerHp + playerShield;
+            const missingAiHp = MAX_HP - aiHp;
+
+            const activePoisons = simulatedStatus ? simulatedStatus.poisons : state.aiPoisons;
+            const activeSlotLocked = simulatedStatus ? simulatedStatus.slotLocked : state.aiSlotLocked;
+            const activePendingOverloads = simulatedStatus ? simulatedStatus.pendingOverloads : state.pendingAiOverloads;
+            const activeLinkTurns = simulatedStatus ? simulatedStatus.linkTurns : state.aiLinkTurns;
+            const activeCurseTurns = simulatedStatus ? simulatedStatus.curseTurns : state.aiCurseTurns;
+
+            let cursePenalty = (!isNormalCard(card) && activeCurseTurns > 0) ? (aiHp <= 10 ? 500 : 14) : 0;
+
+            if (card.type === 'even') {
+                if (card.value >= effectivePlayerPool) return 1800 + card.value;
+                let score = card.value * 1.24;
+                if (playerShield === 0) score += 7;
+                if (playerHp <= 90) score += 12;
+                return score;
+            }
+            if (card.type === 'odd') {
+                if (missingAiHp <= 0) return 2;
+                const usefulHeal = Math.min(card.value, missingAiHp);
+                let urgency = aiHp <= 85 ? 2.0 : aiHp <= 150 ? 1.45 : 1.1;
+                let score = usefulHeal * urgency;
+                if (activeLinkTurns > 0) score *= 0.65;
+                return score;
+            }
+            if (card.type === 'vamp') {
+                if (10 >= effectivePlayerPool) return 1800 - cursePenalty;
+                let score = 30;
+                if (missingAiHp > 0) score += Math.min(10, missingAiHp) * (aiHp < 150 ? 1.65 : 1.1);
+                return score - cursePenalty;
+            }
+            if (card.type === 'link') {
+                if (10 >= effectivePlayerPool) return 1800 - cursePenalty;
+                let score = 36;
+                if (state.playerLinkTurns === 0) score += 12;
+                if (playerHp <= 120) score += 10;
+                return score - cursePenalty;
+            }
+            if (card.type === 'destroy') {
+                if (state.playerHand.length === 0) return 2 - cursePenalty;
+                return (state.playerHand.length >= 3 ? 42 : 28) - cursePenalty;
+            }
+            if (card.type === 'curse') {
+                return (state.playerCurseTurns === 0 ? 44 : 18) - cursePenalty;
+            }
+            if (card.type === 'swap') {
+                if (state.playerHand.length >= 4) {
+                    return (state.aiVisionTurns > 0 ? 48 : 30) - cursePenalty;
+                }
+                return 8 - cursePenalty;
+            }
+            if (card.type === 'revive') {
+                if (state.discard.length === 0) return -100;
+                const avgDiscard = getEstimatedDiscardValue();
+                if (avgDiscard < 12) return 6 - cursePenalty;
+                let score = avgDiscard * 1.12;
+                if (aiHp <= 90 && state.discard.some(d => d.type === 'odd' || d.type === 'shield' || d.type === 'vamp')) {
+                    score += 18;
+                }
+                if (playerHp <= 45 && state.discard.some(d => d.type === 'even' || d.type === 'vamp' || d.type === 'overload')) {
+                    score += 20;
+                }
+                return score - cursePenalty;
+            }
+            if (card.type === 'vision') {
+                if (state.aiVisionTurns > 0) return -10;
+                const handToCheck = remainingHand || state.aiHand;
+                const hasMirrorOrSwap = handToCheck.some(c => c.type === 'mirror' || c.type === 'swap');
+                return (hasMirrorOrSwap ? 35 : 18) - cursePenalty;
+            }
+            if (card.type === 'shield') {
+                if (aiHp <= 90 && aiShield < 30) return 50 - cursePenalty;
+                if (aiShield === 0) return 38 - cursePenalty;
+                return 25 - cursePenalty;
+            }
+            if (card.type === 'purify') {
+                const totalPoisonDmgRemaining = activePoisons.reduce((sum, p) => sum + (p.damage * p.turnsLeft), 0);
+                const hasLock = activeSlotLocked || activePendingOverloads > 0;
+                const hasDebuff = activeLinkTurns > 0 || activeCurseTurns > 0;
+                if (totalPoisonDmgRemaining === 0 && !hasLock && !hasDebuff) return 2;
+
+                let score = totalPoisonDmgRemaining * 1.55;
+                if (hasLock) score += activeSlotLocked ? 46 : 30;
+                if (activeLinkTurns > 0) score += 24;
+                if (activeCurseTurns > 0) score += 26;
+                if (aiHp <= 90 && totalPoisonDmgRemaining > 0) score += 28;
+                return score;
+            }
+            if (card.type === 'poison') {
+                if (effectivePlayerPool <= 20) return 55 - cursePenalty;
+                return (state.playerPoisons.length === 0 ? 46 : 32) - cursePenalty;
+            }
+            if (card.type === 'overload') {
+                if (simulatedOverloads === 0) {
+                    if (effectivePlayerPool <= 10) return 1800 - cursePenalty;
+                    return (playerHp <= 120 ? 52 : 42) - cursePenalty;
+                } else {
+                    if (effectivePlayerPool <= 20) return 1800 - cursePenalty;
+                    if (playerHp <= 110) return 12 - cursePenalty;
+                    return 34 - cursePenalty;
+                }
+            }
+            if (card.type === 'mirror') {
+                if (state.playerHand.length === 0) return 5 - cursePenalty;
+                return (playerHp <= 50 ? 38 : 31) - cursePenalty;
+            }
+            if (card.type === 'clone') {
+                const handToCheck = remainingHand || state.aiHand;
+                const hasTargetInHand = handToCheck.some(c => c.type !== 'clone');
+                if (hasTargetInHand) {
+                    const bestHandTarget = handToCheck
+                        .filter(c => c.type !== 'clone')
+                        .reduce((best, c) => Math.max(best, getSingleCardScoreForAi(c, simulatedOverloads, simulatedStatus, handToCheck)), 0);
+                    return (bestHandTarget * 0.95) - cursePenalty;
+                }
+                return (getEstimatedDeckCardValue() * 0.95) - cursePenalty;
+            }
+            return 0;
+        }
+
+        function chooseAiTurnPlan() {
+            const hand = state.aiHand;
+            if (hand.length === 0) return [];
+
+            const validIndices = hand
+                .map((c, idx) => ({ c, idx }))
+                .filter(({ c }) => !(c.type === 'revive' && state.discard.length === 0));
+
+            if (validIndices.length === 0) return [];
+
+            if (state.maxPlaysThisTurn === 1) {
+                let bestIdx = -1;
+                let bestScore = -Infinity;
+                validIndices.forEach(({ c, idx }) => {
+                    if (c.type === 'clone') return;
+                    const score = getSingleCardScoreForAi(c, 0, null, hand);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestIdx = idx;
+                    }
+                });
+
+                return bestIdx === -1 ? [] : [bestIdx];
+            }
+
+            let bestPair = validIndices.length >= 2
+                ? [validIndices[0].idx, validIndices[1].idx]
+                : [validIndices[0].idx];
+            let bestPairScore = -Infinity;
+
+            for (let a = 0; a < validIndices.length; a++) {
+                for (let b = 0; b < validIndices.length; b++) {
+                    if (a === b) continue;
+                    const i = validIndices[a].idx;
+                    const j = validIndices[b].idx;
+                    const c1 = hand[i];
+                    const c2 = hand[j];
+
+                    const remainingAfterPair = hand.filter((_, idx) => idx !== i && idx !== j);
+                    let pairScore = 0;
+
+                    if (c1.type === 'clone' && c2.type === 'clone') {
+                        const deckVal = getEstimatedDeckCardValue();
+                        pairScore = (deckVal * 1.9) + 12;
+                    } else if (c1.type === 'clone' || c2.type === 'clone') {
+                        const target = c1.type === 'clone' ? c2 : c1;
+                        if (target.type === 'vision') continue;
+
+                        const firstUse = getSingleCardScoreForAi(target, 0, null, remainingAfterPair);
+                        const afterFirstStatus = target.type === 'purify'
+                            ? { poisons: [], slotLocked: false, pendingOverloads: 0, linkTurns: 0, curseTurns: 0 }
+                            : null;
+                        const secondUse = getSingleCardScoreForAi(target, target.type === 'overload' ? 1 : 0, afterFirstStatus, remainingAfterPair);
+                        pairScore = firstUse + secondUse;
+
+                        if (target.type === 'even' && (target.value * 2) >= (state.playerHp + state.playerShield)) {
+                            pairScore += 2000;
+                        }
+                    } else {
+                        const s1 = getSingleCardScoreForAi(c1, 0, null, remainingAfterPair);
+                        const overloadsAfter1 = c1.type === 'overload' ? 1 : 0;
+                        const statusAfter1 = c1.type === 'purify'
+                            ? { poisons: [], slotLocked: false, pendingOverloads: 0, linkTurns: 0, curseTurns: 0 }
+                            : null;
+                        const s2 = getSingleCardScoreForAi(c2, overloadsAfter1, statusAfter1, remainingAfterPair);
+                        pairScore = s1 + s2;
+
+                        const d1 = c1.type === 'even' ? c1.value : ((c1.type === 'vamp' || c1.type === 'link') ? 10 : 0);
+                        const d2 = c2.type === 'even' ? c2.value : ((c2.type === 'vamp' || c2.type === 'link') ? 10 : 0);
+                        if ((d1 + d2) >= (state.playerHp + state.playerShield)) {
+                            pairScore += 2000;
+                        }
+                    }
+
+                    pairScore += Math.random() * 2.5;
+                    if (pairScore > bestPairScore) {
+                        bestPairScore = pairScore;
+                        bestPair = [i, j];
+                    }
+                }
+            }
+
+            return bestPair;
+        }
+
+        /**
+         * EXECUTA O TURNO COMPLETO DA IA
+         */
+        async function runAiTurn() {
+            const canContinueAfterPoison = await processStartOfTurnEffects('ai');
+            if (!canContinueAfterPoison || state.gameOver) return;
+
+            els.actionFeed.textContent = state.aiSlotLocked
+                ? "⚡ IA tem 1 slot bloqueado! Analisando jogada..."
+                : "🤖 IA Tática analisando jogada...";
+            await sleep(820);
+
+            while (!state.gameOver) {
+                const purifyIdx = state.aiHand.findIndex(c => c.type === 'purify');
+                if (purifyIdx === -1) break;
+
+                const hasPoison = state.aiPoisons.length > 0;
+                const hasLinkOrCurse = state.aiLinkTurns > 0 || state.aiCurseTurns > 0;
+                const hasOverloadLock = state.aiSlotLocked || state.pendingAiOverloads > 0;
+                const hasCloneReady = state.aiHand.some(c => c.type === 'clone') && state.aiHand.length >= 3;
+
+                if (hasPoison || hasLinkOrCurse || hasOverloadLock || (hasCloneReady && state.aiHand.length >= 4)) {
+                    const purifyCard = state.aiHand.splice(purifyIdx, 1)[0];
+                    await executeFastPurify('ai', purifyCard);
+                    if (checkWinCondition()) return;
+                    await ensureMidTurnHandNotEmpty('ai');
+                    if (checkWinCondition()) return;
+                } else {
+                    break;
+                }
+            }
+
+            const plannedIndices = chooseAiTurnPlan();
+            const chosenCards = plannedIndices.map(idx => state.aiHand[idx]);
+
+            if (chosenCards.length === 2 && chosenCards.some(c => c.type === 'clone') &&
+                chosenCards.some(c => c.type !== 'clone')) {
+                chosenCards.sort((a, b) => (a.type === 'clone') - (b.type === 'clone'));
+            }
+
+            const sortedDesc = [...plannedIndices].sort((a, b) => b - a);
+            sortedDesc.forEach(idx => state.aiHand.splice(idx, 1));
+
+            if (chosenCards.length === 0) {
+                els.actionFeed.textContent = "🤖 IA não tinha cartas válidas para jogar com slot bloqueado.";
+                await sleep(1050);
+            } else {
+                for (let step = 0; step < chosenCards.length; step++) {
+                    if (state.gameOver) return;
+                    const card = chosenCards[step];
+                    const slotNum = step + 1;
+                    const isFinalCardOfTurn = step === chosenCards.length - 1;
+                    state.cardsPlayedInTurn = slotNum;
+                    renderAll();
+
+                    await playCardInTurn('ai', card, slotNum, isFinalCardOfTurn);
+                    if (checkWinCondition()) return;
+
+                    if (slotNum < chosenCards.length) {
+                        await ensureMidTurnHandNotEmpty('ai');
+                        if (checkWinCondition()) return;
+                        await sleep(650);
+                    }
+                }
+            }
+
+            await sleep(650);
+            refillHand('ai');
+
+            if (state.aiVisionTurns > 0) {
+                state.aiVisionTurns -= 1;
+            }
+            if (state.aiLinkTurns > 0) {
+                state.aiLinkTurns -= 1;
+            }
+            if (state.aiCurseTurns > 0) {
+                state.aiCurseTurns -= 1;
+            }
+
+            state.playerSlotLocked = state.pendingPlayerOverloads === 1;
+            state.pendingPlayerOverloads = 0;
+
+            state.turnNumber++;
+            if (state.skipNextPlayerTurn) {
+                state.skipNextPlayerTurn = false;
+                state.playerSlotLocked = false;
+                state.turn = 'ai';
+                state.cardsPlayedInTurn = 0;
+                state.currentTurnCards = [];
+                state.maxPlaysThisTurn = BASE_CARDS_PER_TURN;
+                clearCenterTable(false);
+                showToast("⚡🚫 SEU TURNO FOI ANULADO!\nOs dois slots foram bloqueados pelo Duplo Choque da IA.");
+                els.actionFeed.textContent = "⚡ Seu turno foi anulado! A IA joga novamente.";
+                renderAll();
+                await sleep(850);
+                await runAiTurn();
+                return;
+            }
+            state.turn = 'player';
+            state.cardsPlayedInTurn = 0;
+            state.currentTurnCards = [];
+            state.maxPlaysThisTurn = state.playerSlotLocked ? 1 : BASE_CARDS_PER_TURN;
+            clearCenterTable(state.playerSlotLocked);
+            renderAll();
+
+            const playerAliveAfterPoison = await processStartOfTurnEffects('player');
+            if (!playerAliveAfterPoison || state.gameOver) return;
+
+            state.isBusy = false;
+            els.actionFeed.textContent = state.playerSlotLocked
+                ? "⚡ Você sofreu Sobrecarga! Jogue apenas 1 carta neste turno."
+                : "Seu turno! Escolha a 1ª carta.";
+            renderAll();
+        }
+
+        function endGame(playerWon) {
+            closeDiscardModal();
+            els.destroyModal.classList.add('hidden');
+            if (playerWon) {
+                sfx.playWin();
+                document.getElementById('end-emoji').textContent = '🏆';
+                const title = document.getElementById('end-title');
+                title.textContent = 'VITÓRIA!';
+                title.className = 'result-title win';
+                document.getElementById('end-subtitle').textContent = 'Você superou a IA Tática!';
+                document.getElementById('stat-winner-hp').textContent = `${state.playerHp} HP`;
+            } else {
+                sfx.playLose();
+                document.getElementById('end-emoji').textContent = '💀';
+                const title = document.getElementById('end-title');
+                title.textContent = 'DERROTA!';
+                title.className = 'result-title lose';
+                document.getElementById('end-subtitle').textContent = 'Sua vida chegou a 0. Tente outra estratégia!';
+                document.getElementById('stat-winner-hp').textContent = `${state.aiHp} HP (IA)`;
+            }
+
+            document.getElementById('stat-turns').textContent = state.turnNumber;
+            document.getElementById('stat-dmg').textContent = state.stats.playerDamageDealt;
+            document.getElementById('stat-heal').textContent = state.stats.playerHealed;
+            document.getElementById('stat-cards-played').textContent = state.stats.playerCardsPlayed;
+            document.getElementById('stat-specials').textContent = state.stats.specialsUsed;
+
+            setTimeout(() => showScreen('gameover'), 950);
+        }
+
+        applyTitleWatermarks();
+        applyArenaBackground();
+        syncRulesWithCardArts();
+        enableGlobalEmojiArts();
+        document.getElementById('btn-start').addEventListener('click', startGame);
+        const rulesModal = document.getElementById('rules-modal');
+        document.getElementById('btn-open-rules').addEventListener('click', () => {
+            rulesModal.classList.remove('hidden');
+        });
+        document.getElementById('btn-close-rules').addEventListener('click', () => {
+            rulesModal.classList.add('hidden');
+        });
+        rulesModal.addEventListener('click', (e) => {
+            if (e.target === rulesModal) rulesModal.classList.add('hidden');
+        });
+        document.getElementById('btn-play-again').addEventListener('click', startGame);
+        document.getElementById('btn-back-title').addEventListener('click', () => {
+            sfx.init();
+            closeDiscardModal();
+            els.destroyModal.classList.add('hidden');
+            showScreen('start');
+        });
+
+        document.getElementById('btn-sound').addEventListener('click', (e) => {
+            sfx.enabled = !sfx.enabled;
+            e.currentTarget.textContent = sfx.enabled ? '🔊 Som' : '🔇 Mudo';
+        });
+
+        els.discardPileBox.addEventListener('click', () => {
+            sfx.init();
+            openDiscardModal();
+        });
+
+        els.btnCloseDiscard.addEventListener('click', closeDiscardModal);
+
+        els.discardModal.addEventListener('click', (e) => {
+            if (e.target === els.discardModal) {
+                closeDiscardModal();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (!els.discardModal.classList.contains('hidden')) closeDiscardModal();
+                if (!rulesModal.classList.contains('hidden')) rulesModal.classList.add('hidden');
+            }
+        });
+
+        // O menu inicial só aparece depois da tentativa de carregar todas as artes configuradas.
+        initializeLoadingScreen();
+    </script>
+</body>
+</html>
